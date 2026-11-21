@@ -1,0 +1,5 @@
+packages:
+  - .
+# Hoisted layout: real directories instead of symlinks, so the plugin's
+# imports resolve identically under Node, Electron, and the DSH loader.
+nodeLinker: hoisted

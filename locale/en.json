@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Exa tools",
+    "description": "Adds exa_search and exa_fetch to the agent's toolset, powered by Exa. Without an API key the tools use Exa's free hosted MCP endpoint (mcp.exa.ai, rate-limited); with a key they call the official Exa API (api.exa.ai). Open this plugin's page under Plugins to set or clear the API key and tune limits; saves apply immediately without a restart. Search queries and fetched URLs are sent to Exa. Turning the plugin off removes both tools."
+  }
+}
