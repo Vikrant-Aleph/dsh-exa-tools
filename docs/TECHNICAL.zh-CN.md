@@ -146,7 +146,7 @@ ctx.configForms.whileServed(['exa-tools'], () =>
 
 - `plugins.bundle.config` 以 **bundle 包名**为 key；卡片渲染在该 bundle 详情页的描述与行列表之间。`whileServed` 使注册仅在 Host 提供该命名空间期间存活。
 - 读：`ctx.configForms.get('exa-tools')`（值 + 有序写入）与 `ctx.configForms.describe()`（共享 mirror，取 secret 存在标记）。两者都用 `useSyncExternalStore` 消费；类方法用 `useCallback` 包一层以保住 `this`。
-- 写：草稿暂存，一次「保存」提交 `form.mutate(ops, revision)`——变更字段 `set`，清空的数字字段 `unset`（恢复组合默认值）。revision 围栏拒绝过期写入；拒绝会显示为可见错误并保留草稿。「清除 API Key」即 `form.unset('apiKey')`。
+- 写：草稿暂存，一次「保存」提交 `form.mutate(ops, revision)`——变更字段 `set`，清空的数字字段 `unset`（恢复组合默认值；表单会说明这一语义并显示各字段默认值）。revision 围栏在**开始编辑时**取快照，因此别处的并发写入会被拒绝而非静默覆盖；被拒时自动重载最新值、保留草稿并重置围栏，用户核对后可重试。数字校验错误会指明字段、标 `aria-invalid`、展开折叠并聚焦该输入框。成功消息带 `role="status"` 播报。「清除 API Key」即 `form.unset('apiKey')`。
 - Key 输入框只写（`type=password`、`autocomplete=new-password`、草稿可切换显示）。占位符反映存在标记：「已配置 —— 输入新值可替换」/「粘贴 Exa API Key」。
 - 样式：`dsh-exa-` 前缀的自包含控件，颜色全部走 `--dsw-alias-*` 主题令牌（样式范式抄自官方 Models 设置页）。不把任何 Harness Client 包当模块 import；React 来自浏览器模块表（`require('react')`）。
 - 字典（en/zh）经 `ctx.locale` 注册；所有可见文本走 `t`。

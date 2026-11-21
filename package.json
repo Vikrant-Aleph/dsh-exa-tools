@@ -20,6 +20,8 @@
     "docs",
     "scripts",
     "icon.svg",
+    "pnpm-workspace.yaml",
+    "pnpm-lock.yaml",
     "README.md",
     "README.zh-CN.md",
     "LICENSE"

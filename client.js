@@ -18,7 +18,7 @@ window.__ModuleLoader__.load({
   factory(require) {
     const React = require('react')
     const h = React.createElement
-    const { useState, useCallback, useSyncExternalStore } = React
+    const { useState, useCallback, useSyncExternalStore, useId, useRef } = React
 
     const PKG = 'dsh-exa-tools'
     const NS = 'exaTools'
@@ -38,23 +38,25 @@ window.__ModuleLoader__.load({
         keyReveal: 'Show key',
         keyHide: 'Hide key',
         advanced: 'Limits and timeouts',
+        advancedHint: 'Leave a field empty and save to restore its default.',
         searchMaxResults: 'Max search results',
         fetchMaxCharacters: 'Max fetch characters',
         searchTimeoutMs: 'Search timeout (ms)',
         fetchTimeoutMs: 'Fetch timeout (ms)',
+        default: 'default',
         save: 'Save',
         saving: 'Saving…',
         clearKey: 'Clear API key',
+        clearing: 'Clearing…',
         saved: 'Saved. Changes apply immediately.',
         cleared: 'API key cleared. The tools now use the free endpoint.',
-        refused: 'The Host refused the write. Refresh and try again.',
+        noChanges: 'No changes to save.',
+        refused: 'The configuration was updated elsewhere; the latest values were reloaded. Your drafts are kept — review them and save again.',
         saveFailed: 'Save failed: ',
-        invalidNumber: 'Enter a whole number in the allowed range.',
+        invalidNumber: 'enter a whole number in the allowed range',
         loading: 'Loading configuration…',
         unavailable: 'The Exa tools plugin is not active in this profile.',
         readonly: 'This profile\'s configuration is read-only here.',
-        summarySet: 'Exa API key configured',
-        summaryUnset: 'Free Exa endpoint (no API key)',
       },
       zh: {
         intro: 'Exa 为 exa_search 和 exa_fetch 提供支持。未填写 API Key 时使用 Exa 免费托管端点（有速率限制）；填写后改用 Exa 官方 API。',
@@ -69,32 +71,38 @@ window.__ModuleLoader__.load({
         keyReveal: '显示密钥',
         keyHide: '隐藏密钥',
         advanced: '限额与超时',
+        advancedHint: '清空某字段并保存即恢复其默认值。',
         searchMaxResults: '搜索最大结果数',
         fetchMaxCharacters: '抓取最大字符数',
         searchTimeoutMs: '搜索超时（毫秒）',
         fetchTimeoutMs: '抓取超时（毫秒）',
+        default: '默认',
         save: '保存',
         saving: '保存中…',
         clearKey: '清除 API Key',
+        clearing: '清除中…',
         saved: '已保存，立即生效。',
         cleared: '已清除 API Key，工具改用免费端点。',
-        refused: 'Host 拒绝了本次写入，请刷新后重试。',
+        noChanges: '没有需要保存的改动。',
+        refused: '配置已被其他改动更新，最新值已重新载入。草稿已保留，请核对后重新保存。',
         saveFailed: '保存失败：',
-        invalidNumber: '请输入允许范围内的整数。',
+        invalidNumber: '请输入允许范围内的整数',
         loading: '正在加载配置…',
         unavailable: 'Exa 工具插件未在本 profile 中启用。',
         readonly: '本 profile 的配置在此只读。',
-        summarySet: '已配置 Exa API Key',
-        summaryUnset: '免费 Exa 端点（未设 API Key）',
       },
     }
 
-    /** Numeric volatile fields with their schema ranges, in form order. */
+    /**
+     * Numeric volatile fields with their schema ranges and defaults, in form
+     * order. Kept in sync with the Config schema in index.js by hand; the
+     * ranges are also validated Host-side on every write.
+     */
     const NUM_FIELDS = [
-      { name: 'searchMaxResults', min: 1, max: 50 },
-      { name: 'fetchMaxCharacters', min: 1000, max: 500000 },
-      { name: 'searchTimeoutMs', min: 1000, max: 300000 },
-      { name: 'fetchTimeoutMs', min: 1000, max: 300000 },
+      { name: 'searchMaxResults', min: 1, max: 50, def: 10 },
+      { name: 'fetchMaxCharacters', min: 1000, max: 500000, def: 50000 },
+      { name: 'searchTimeoutMs', min: 1000, max: 300000, def: 30000 },
+      { name: 'fetchTimeoutMs', min: 1000, max: 300000, def: 60000 },
     ]
 
     const EYE_CONTOUR = 'M1.5 8C2.9 5.25 5.25 3.5 8 3.5C10.75 3.5 13.1 5.25 14.5 8C13.1 10.75 10.75 12.5 8 12.5C5.25 12.5 2.9 10.75 1.5 8Z'
@@ -103,9 +111,9 @@ window.__ModuleLoader__.load({
 
     const STYLE = `
 .dsh-exa-card { display: flex; flex-direction: column; gap: 12px; max-width: 720px; color: var(--dsw-alias-label-primary); }
-.dsh-exa-intro { margin: 0; font-size: 13px; line-height: 20px; color: var(--dsw-alias-label-secondary); }
+.dsh-exa-intro { margin: 0; font-size: 14px; line-height: 22px; color: var(--dsw-alias-label-secondary); }
 .dsh-exa-mode { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; line-height: 20px; }
-.dsh-exa-dot { box-sizing: border-box; display: inline-block; flex: none; width: 8px; height: 8px; border-radius: 50%; }
+.dsh-exa-dot { box-sizing: border-box; display: inline-block; flex: none; width: 8px; height: 8px; border-radius: 50%; corner-shape: round; }
 .dsh-exa-dot-on { background: var(--dsw-alias-state-success-primary); }
 .dsh-exa-dot-off { background: var(--dsw-alias-state-warn-primary, var(--dsw-alias-label-tertiary)); }
 .dsh-exa-hint { margin: 0; font-size: 12px; line-height: 18px; color: var(--dsw-alias-label-tertiary); }
@@ -115,6 +123,7 @@ window.__ModuleLoader__.load({
 .dsh-exa-input:focus { outline: none; border-color: var(--dsw-alias-state-business-primary); }
 .dsh-exa-input::placeholder { color: var(--dsw-alias-label-dimmed); }
 .dsh-exa-input:disabled { opacity: 0.6; cursor: default; }
+.dsh-exa-input[aria-invalid='true'] { border-color: var(--dsw-alias-state-error-primary); }
 .dsh-exa-input-filled { padding-right: 40px; }
 .dsh-exa-keyrow { position: relative; }
 .dsh-exa-keytoggle { position: absolute; inset: 1px 1px 1px auto; display: inline-flex; align-items: center; justify-content: center; width: 32px; padding: 0; border: none; border-radius: var(--dsw-radius-md); background: none; color: var(--dsw-alias-label-secondary); cursor: pointer; }
@@ -122,7 +131,7 @@ window.__ModuleLoader__.load({
 .dsh-exa-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
 .dsh-exa-range { font-size: 11px; line-height: 16px; color: var(--dsw-alias-label-tertiary); }
 .dsh-exa-actions { display: flex; align-items: center; gap: 8px; }
-.dsh-exa-primary, .dsh-exa-danger { box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; height: 32px; padding: 0 14px; border: none; border-radius: var(--dsw-radius-md); font: inherit; font-size: 13px; line-height: 20px; cursor: pointer; }
+.dsh-exa-primary, .dsh-exa-danger { box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; height: 36px; padding: 0 14px; border: none; border-radius: var(--dsw-radius-md); font: inherit; font-size: 14px; line-height: 22px; cursor: pointer; }
 .dsh-exa-primary { background: var(--dsw-alias-button-primary-fill); color: var(--dsw-alias-label-primary-foreground); }
 @media (hover: hover) { .dsh-exa-primary:hover:not(:disabled) { background: var(--dsw-alias-button-primary-hover); } }
 .dsh-exa-danger { background: transparent; color: var(--dsw-alias-state-error-primary); }
@@ -139,13 +148,12 @@ window.__ModuleLoader__.load({
 .dsh-exa-advanced-body { display: flex; flex-direction: column; gap: 10px; padding-top: 10px; }
 .dsh-exa-link { color: var(--dsw-alias-state-business-primary); text-decoration: none; }
 @media (hover: hover) { .dsh-exa-link:hover { text-decoration: underline; } }
-.dsh-exa-summary { font-size: 12px; line-height: 18px; color: var(--dsw-alias-label-tertiary); }
 @media (prefers-reduced-motion: reduce) { .dsh-exa-advanced summary::before { transition: none; } }
 `
 
     /** The bundle-page configuration card. Props: t, view, form, mirror. */
     function ExaConfigCard(props) {
-      const { t, view, form, mirror } = props
+      const { t, form, mirror } = props
       const subscribeForm = useCallback(listener => form.subscribe(listener), [form])
       const readForm = useCallback(() => form.getSnapshot(), [form])
       const subscribeMirror = useCallback(listener => mirror.subscribe(listener), [mirror])
@@ -153,34 +161,51 @@ window.__ModuleLoader__.load({
       const snap = useSyncExternalStore(subscribeForm, readForm)
       const mirrorSnap = useSyncExternalStore(subscribeMirror, readMirror)
 
+      const idPrefix = useId()
+      const fieldRefs = useRef({})
       const [drafts, setDrafts] = useState({})
-      const [busy, setBusy] = useState(false)
+      // Revision read when editing began: the fence against concurrent writes.
+      // Reset after a settled write; a refusal also resets it so an informed
+      // retry (the message says the latest values were reloaded) can proceed.
+      const [baseRevision, setBaseRevision] = useState(undefined)
+      const [busyAction, setBusyAction] = useState(null)
       const [message, setMessage] = useState(null)
       const [revealed, setRevealed] = useState(false)
+      const [invalidField, setInvalidField] = useState(null)
+      const [advancedOpen, setAdvancedOpen] = useState(false)
 
       const nsView = mirrorSnap.view?.namespaces?.find(candidate => candidate.ns === ENTRY_ID)
       const keySet = nsView?.secrets?.some(secret => secret.path.length === 1 && secret.path[0] === 'apiKey' && secret.set) === true
 
-      if (view === 'summary') {
-        return h('span', { className: 'dsh-exa-summary' }, keySet ? t('summarySet') : t('summaryUnset'))
-      }
       if (snap.status === 'loading') return h('p', { className: 'dsh-exa-hint' }, t('loading'))
       if (snap.status === 'unavailable') return h('p', { className: 'dsh-exa-hint' }, t('unavailable'))
 
       const value = snap.value ?? {}
+      const base = snap.base ?? {}
       const writable = snap.writable
+      const busy = busyAction !== null
       const disabled = !writable || busy
       const keyDraft = drafts.apiKey ?? ''
+      const messageId = `${idPrefix}-message`
       const draftText = field => drafts[field] ?? (value[field] !== undefined ? String(value[field]) : '')
+
+      // Dirty check normalizes numeric drafts the same way save parses them,
+      // so "10.0" or "010" never light up Save for a no-op.
       let dirty = keyDraft.trim().length > 0
       for (const field of NUM_FIELDS) {
         const draft = drafts[field.name]
-        if (draft !== undefined && draft.trim() !== String(value[field.name] ?? '')) dirty = true
+        if (draft === undefined) continue
+        const text = draft.trim()
+        if (text === '') { if (value[field.name] !== undefined) dirty = true; continue }
+        if (!/^\d+$/.test(text)) { dirty = true; continue }
+        if (Number(text) !== value[field.name]) dirty = true
       }
 
       const edit = (field, text) => {
+        if (baseRevision === undefined) setBaseRevision(snap.revision)
         setDrafts(current => ({ ...current, [field]: text }))
         setMessage(null)
+        setInvalidField(null)
         if (field === 'apiKey') setRevealed(false)
       }
 
@@ -189,6 +214,7 @@ window.__ModuleLoader__.load({
         const ops = []
         const trimmedKey = keyDraft.trim()
         if (trimmedKey) ops.push({ op: 'set', path: ['apiKey'], value: trimmedKey })
+        let firstInvalid = null
         for (const field of NUM_FIELDS) {
           const draft = drafts[field.name]
           if (draft === undefined) continue
@@ -197,42 +223,73 @@ window.__ModuleLoader__.load({
             if (value[field.name] !== undefined) ops.push({ op: 'unset', path: [field.name] })
             continue
           }
-          const number = Number(text)
+          const number = /^\d+$/.test(text) ? Number(text) : NaN
           if (!Number.isInteger(number) || number < field.min || number > field.max) {
-            setMessage({ kind: 'err', text: `${t('invalidNumber')} (${field.min}–${field.max})` })
-            return
+            firstInvalid ??= field
+            continue
           }
           if (number !== value[field.name]) ops.push({ op: 'set', path: [field.name], value: number })
         }
-        if (ops.length === 0) return
-        setBusy(true)
+        if (firstInvalid) {
+          setInvalidField(firstInvalid.name)
+          setAdvancedOpen(true)
+          setMessage({ kind: 'err', text: `${t(firstInvalid.name)}: ${t('invalidNumber')} (${firstInvalid.min}–${firstInvalid.max})` })
+          // Focus the offending input once the expanded details has rendered.
+          setTimeout(() => { fieldRefs.current[firstInvalid.name]?.focus() }, 0)
+          return
+        }
+        if (ops.length === 0) {
+          setMessage({ kind: 'ok', text: t('noChanges') })
+          return
+        }
+        setBusyAction('save')
         try {
-          const accepted = await form.mutate(ops, snap.revision)
-          setMessage(accepted ? { kind: 'ok', text: t('saved') } : { kind: 'err', text: t('refused') })
-          if (accepted) { setDrafts({}); setRevealed(false) }
+          const accepted = await form.mutate(ops, baseRevision ?? snap.revision)
+          if (accepted) {
+            setMessage({ kind: 'ok', text: t('saved') })
+            setDrafts({})
+            setRevealed(false)
+            setInvalidField(null)
+          } else {
+            // The transport already reloaded the latest Host values; drafts
+            // stay for review. Drop the stale fence so a retry can proceed.
+            setMessage({ kind: 'err', text: t('refused') })
+          }
+          setBaseRevision(undefined)
         } catch (error) {
           setMessage({ kind: 'err', text: t('saveFailed') + (error?.message ?? String(error)) })
         } finally {
-          setBusy(false)
+          setBusyAction(null)
         }
       }
 
       const clearKey = async () => {
         if (busy || !writable) return
-        setBusy(true)
+        setBusyAction('clear')
         try {
           const accepted = await form.unset('apiKey')
-          setMessage(accepted ? { kind: 'ok', text: t('cleared') } : { kind: 'err', text: t('refused') })
-          if (accepted) { setDrafts(current => ({ ...current, apiKey: '' })); setRevealed(false) }
+          if (accepted) {
+            setMessage({ kind: 'ok', text: t('cleared') })
+            setDrafts(current => {
+              const next = { ...current }
+              delete next.apiKey
+              return next
+            })
+            setRevealed(false)
+          } else {
+            setMessage({ kind: 'err', text: t('refused') })
+          }
+          setBaseRevision(undefined)
         } catch (error) {
           setMessage({ kind: 'err', text: t('saveFailed') + (error?.message ?? String(error)) })
         } finally {
-          setBusy(false)
+          setBusyAction(null)
         }
       }
 
       const canReveal = keyDraft.length > 0 && !disabled
       const showText = canReveal && revealed
+      const keyInputId = `${idPrefix}-api-key`
 
       return h('div', { className: 'dsh-exa-card' },
         h('p', { className: 'dsh-exa-intro' }, t('intro')),
@@ -241,10 +298,10 @@ window.__ModuleLoader__.load({
           keySet ? t('modeApi') : t('modeFree')),
         keySet ? null : h('p', { className: 'dsh-exa-hint' }, t('modeFreeHint')),
         h('div', { className: 'dsh-exa-field' },
-          h('label', { className: 'dsh-exa-label', htmlFor: 'dsh-exa-api-key' }, t('keyLabel')),
+          h('label', { className: 'dsh-exa-label', htmlFor: keyInputId }, t('keyLabel')),
           h('div', { className: 'dsh-exa-keyrow' },
             h('input', {
-              id: 'dsh-exa-api-key',
+              id: keyInputId,
               className: `dsh-exa-input${keyDraft.length > 0 ? ' dsh-exa-input-filled' : ''}`,
               type: showText ? 'text' : 'password',
               autoComplete: 'new-password',
@@ -271,39 +328,56 @@ window.__ModuleLoader__.load({
               target: '_blank',
               rel: 'noreferrer',
             }, t('keyLink')))),
-        h('details', { className: 'dsh-exa-advanced' },
+        h('details', {
+          className: 'dsh-exa-advanced',
+          open: advancedOpen,
+          onToggle: event => setAdvancedOpen(event.currentTarget.open),
+        },
           h('summary', null, t('advanced')),
           h('div', { className: 'dsh-exa-advanced-body' },
+            h('p', { className: 'dsh-exa-hint' }, t('advancedHint')),
             h('div', { className: 'dsh-exa-grid' },
-              NUM_FIELDS.map(field => h('div', { className: 'dsh-exa-field', key: field.name },
-                h('label', { className: 'dsh-exa-label', htmlFor: `dsh-exa-${field.name}` }, t(field.name)),
-                h('input', {
-                  id: `dsh-exa-${field.name}`,
-                  className: 'dsh-exa-input',
-                  type: 'text',
-                  inputMode: 'numeric',
-                  value: draftText(field.name),
-                  disabled,
-                  onChange: event => edit(field.name, event.target.value),
-                }),
-                h('span', { className: 'dsh-exa-range' }, `${field.min}–${field.max}`)))))),
+              NUM_FIELDS.map(field => {
+                const inputId = `${idPrefix}-${field.name}`
+                const rangeId = `${idPrefix}-range-${field.name}`
+                const invalid = invalidField === field.name
+                const describedBy = invalid ? `${rangeId} ${messageId}` : rangeId
+                return h('div', { className: 'dsh-exa-field', key: field.name },
+                  h('label', { className: 'dsh-exa-label', htmlFor: inputId }, t(field.name)),
+                  h('input', {
+                    id: inputId,
+                    ref: (element) => { fieldRefs.current[field.name] = element },
+                    className: 'dsh-exa-input',
+                    type: 'text',
+                    inputMode: 'numeric',
+                    value: draftText(field.name),
+                    disabled,
+                    'aria-invalid': invalid || undefined,
+                    'aria-describedby': describedBy,
+                    onChange: event => edit(field.name, event.target.value),
+                  }),
+                  h('span', { className: 'dsh-exa-range', id: rangeId },
+                    `${field.min}–${field.max} · ${t('default')} ${base[field.name] ?? field.def}`))
+              })))),
         h('div', { className: 'dsh-exa-actions' },
           h('button', {
             type: 'button',
             className: 'dsh-exa-primary',
             disabled: disabled || !dirty,
             onClick: () => { void save() },
-          }, busy ? t('saving') : t('save')),
+          }, busyAction === 'save' ? t('saving') : t('save')),
           keySet ? h('button', {
             type: 'button',
             className: 'dsh-exa-danger',
             disabled,
             onClick: () => { void clearKey() },
-          }, t('clearKey')) : null),
+          }, busyAction === 'clear' ? t('clearing') : t('clearKey')) : null),
         writable ? null : h('p', { className: 'dsh-exa-hint' }, t('readonly')),
         message ? h('p', {
+          id: messageId,
           className: message.kind === 'ok' ? 'dsh-exa-saved' : 'dsh-exa-error',
-          role: message.kind === 'err' ? 'alert' : undefined,
+          role: message.kind === 'err' ? 'alert' : 'status',
+          'aria-live': message.kind === 'err' ? 'assertive' : 'polite',
         }, message.text) : null)
     }
 
