@@ -184,6 +184,7 @@ A local-directory install **links** the checkout: the profile's `node_modules/ds
 
 - `scripts/smoke.mjs` — live backend tests: free search/fetch through `lib/*`, REST 401 error path (`--rest`), real REST with `EXA_API_KEY` (`--api`).
 - `scripts/apply-test.mjs` — runs `apply()` against a mock cordis context, then executes the registered definitions: free-mode canonical values + render, argument validation, and API-mode wiring (invalid key → mapped 401).
+- `scripts/client-test.mjs` — loads `client.js` through a mock `__ModuleLoader__`, runs the browser `apply()` against a mock context, and renders the settings page, nav icon, and card with a minimal React mock; asserts the three slot registrations and their identity rules.
 - Verified in the profile: bundle installs, row `include:exa-tools` reaches `fiberPhase: active`, settings namespace derivation and slot contract checked against the installed sources. Rendered UI and in-session tool calls require a browser/new session and are reported separately.
 
 ## 9. Possible extensions

@@ -183,6 +183,7 @@ ctx.configForms.whileServed(['exa-tools'], () =>
 
 - `scripts/smoke.mjs` —— 真实后端测试：经 `lib/*` 的免费搜索/抓取、REST 401 错误路径（`--rest`）、带 `EXA_API_KEY` 的真实 REST（`--api`）。
 - `scripts/apply-test.mjs` —— 用 mock cordis context 跑 `apply()`，再执行注册出的定义：免费模式规范值 + 渲染、参数校验、API 模式接线（无效 Key → 映射后的 401）。
+- `scripts/client-test.mjs` —— 经 mock `__ModuleLoader__` 加载 `client.js`，用 mock context 跑浏览器端 `apply()`，以最小 React mock 渲染设置页、导航图标与卡片；断言三个插槽注册及其 id 规则。
 - 已在 profile 中验证：bundle 安装成功，行 `include:exa-tools` 达到 `fiberPhase: active`；settings 命名空间推导与插槽契约已对照安装源码核实。渲染效果与会话内工具调用需要浏览器/新会话，另行报告。
 
 ## 9. 可能的扩展

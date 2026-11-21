@@ -103,6 +103,7 @@ cordis.patch.yml    插入 exa-tools 行的 bundle patch
 locale/             插件显示元数据（en、zh）
 scripts/smoke.mjs   后端冒烟测试（真实端点）
 scripts/apply-test.mjs  集成测试：mock context 下 apply() + execute()
+scripts/client-test.mjs 客户端测试：插槽注册 + 设置页渲染
 ```
 
 ```sh
@@ -110,6 +111,7 @@ pnpm install          # 首次；hoisted 布局（见 pnpm-workspace.yaml）
 pnpm smoke            # 免费端点搜索 + 抓取，REST 401 错误路径
 pnpm smoke:api        # 真实 REST 调用；需要环境里有 EXA_API_KEY
 pnpm test:apply       # 注册、参数校验、双后端、渲染
+pnpm test:client      # 设置页 / 导航图标 / 卡片注册
 ```
 
 架构细节（bundle 结构、原生工具定义契约、MCP 握手、密钥脱敏、settings 传输）见[技术文档](docs/TECHNICAL.zh-CN.md)。

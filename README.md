@@ -103,6 +103,7 @@ cordis.patch.yml    bundle patch inserting the exa-tools row
 locale/             plugin display metadata (en, zh)
 scripts/smoke.mjs   backend smoke test against the live endpoints
 scripts/apply-test.mjs  integration test: apply() + execute() via a mock context
+scripts/client-test.mjs client test: slot registrations + settings page render
 ```
 
 ```sh
@@ -110,6 +111,7 @@ pnpm install          # once; hoisted layout (see pnpm-workspace.yaml)
 pnpm smoke            # free endpoint search + fetch, REST 401 error path
 pnpm smoke:api        # real REST calls; needs EXA_API_KEY in the environment
 pnpm test:apply       # registration, validation, both backends, rendering
+pnpm test:client      # settings page / nav icon / card registrations
 ```
 
 See [docs/TECHNICAL.md](docs/TECHNICAL.md) for the architecture: bundle layout, the native tool-definition contract, the MCP handshake, secret redaction, and the settings transport.
