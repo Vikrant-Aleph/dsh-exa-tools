@@ -134,15 +134,27 @@ POST tools/call                → 200，SSE（或 JSON）；按 JSON-RPC id 匹
 
 ## 5. 设置界面（浏览器端）
 
-`client.js` 向 Plugins 页插槽注册一个 React 组件：
+主入口是**「设置」面板导航中的独立页面**，注册进 `settings.section`（与会话回收站等第三方页面同一插槽）；同一张卡片也嵌入 Plugins 页：
 
 ```js
+// 设置面板页面（locale 变化时重新注册以刷新导航标签：shell 自身不订阅 locale）。
+ctx.slots.inject('settings.section', () => ctx.slots.register({
+  name: 'settings.section', id: 'exa-tools', order: 35,
+  label: () => t('nav'), inject: () => ({ form, mirror, t }),
+}, ExaSettingsPage))
+// 导航图标：注册 id 必须等于 section id；以 currentColor 绘制。
+ctx.slots.inject('settings.section.icon', () => ctx.slots.register({
+  name: 'settings.section.icon', id: 'exa-tools',
+}, ExaSettingsIcon))
+// Plugins 页卡片，以 bundle 包名为 key。
 ctx.configForms.whileServed(['exa-tools'], () =>
   ctx.slots.inject('plugins.bundle.config', () => ctx.slots.register({
     name: 'plugins.bundle.config', key: 'dsh-exa-tools', locale: 'exaTools',
     inject: () => ({ form, mirror }),
   }, ExaConfigCard)))
 ```
+
+- `ExaSettingsPage` 是标题 + `ExaConfigCard`；section 组件收到 shell 的 `close` 能力与注入的 `{ form, mirror, t }`。
 
 - `plugins.bundle.config` 以 **bundle 包名**为 key；卡片渲染在该 bundle 详情页的描述与行列表之间。`whileServed` 使注册仅在 Host 提供该命名空间期间存活。
 - 读：`ctx.configForms.get('exa-tools')`（值 + 有序写入）与 `ctx.configForms.describe()`（共享 mirror，取 secret 存在标记）。两者都用 `useSyncExternalStore` 消费；类方法用 `useCallback` 包一层以保住 `this`。

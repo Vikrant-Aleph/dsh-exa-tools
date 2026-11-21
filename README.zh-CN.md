@@ -5,7 +5,7 @@
 - **`exa_search`** —— 语义化网页搜索：用自然语言描述你想找的页面，返回来源 URL、标题和相关摘录。
 - **`exa_fetch`** —— 通过 Exa 抓取任意网页，返回干净的正文（text/markdown）。
 
-**没有 API Key 也能直接用。** 未填 Key 时走 Exa 免费托管 MCP 端点（`mcp.exa.ai`，有速率限制）；填了 Key 则走 Exa 官方 REST API（`api.exa.ai`），使用你账户的限额。Key 只需在「插件」页面填一次，不用改配置文件，不用重启。
+**没有 API Key 也能直接用。** 未填 Key 时走 Exa 免费托管 MCP 端点（`mcp.exa.ai`，有速率限制）；填了 Key 则走 Exa 官方 REST API（`api.exa.ai`），使用你账户的限额。Key 只需在「设置 → Exa 搜索」填一次，不用改配置文件，不用重启。
 
 [English](README.md) · [技术文档（中文）](docs/TECHNICAL.zh-CN.md) · [Technical documentation](docs/TECHNICAL.md)
 
@@ -30,7 +30,7 @@
 
 ## 填写 API Key（可选）
 
-1. 侧边栏「插件」→「Exa 搜索工具」。
+1. 侧边栏「设置」→「Exa 搜索」（「插件」页的本插件详情里也有同样的表单）。
 2. 在 **API Key** 输入框粘贴密钥，点「保存」。密钥在 [dashboard.exa.ai/api-keys](https://dashboard.exa.ai/api-keys) 获取。
 3. 状态行从「免费模式」变为「API 模式」。下一次工具调用即生效，无需重启。
 
@@ -66,7 +66,7 @@ Key 保存在 profile 的 `cordis.patch.yml` 中（与其他插件设置同一�
 
 ## 配置项
 
-插件页面（插件 → Exa 搜索工具）可实时修改：API Key、`searchMaxResults`、`fetchMaxCharacters`、`searchTimeoutMs`、`fetchTimeoutMs`。部署级字段在 profile 的 `cordis.patch.yml` 中编辑：
+设置页（设置 → Exa 搜索）可实时修改：API Key、`searchMaxResults`、`fetchMaxCharacters`、`searchTimeoutMs`、`fetchTimeoutMs`。部署级字段在 profile 的 `cordis.patch.yml` 中编辑：
 
 ```yaml
 - id: exa-tools

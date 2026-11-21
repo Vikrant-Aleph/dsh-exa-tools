@@ -26,6 +26,8 @@ window.__ModuleLoader__.load({
 
     const DICTS = {
       en: {
+        nav: 'Exa tools',
+        pageTitle: 'Exa search tools',
         intro: 'Exa powers exa_search and exa_fetch. Without a key the tools use Exa\'s free hosted endpoint (rate-limited); with a key they use the official Exa API.',
         modeApi: 'API mode — official Exa API (api.exa.ai)',
         modeFree: 'Free mode — hosted MCP endpoint (mcp.exa.ai)',
@@ -59,6 +61,8 @@ window.__ModuleLoader__.load({
         readonly: 'This profile\'s configuration is read-only here.',
       },
       zh: {
+        nav: 'Exa 搜索',
+        pageTitle: 'Exa 搜索工具',
         intro: 'Exa 为 exa_search 和 exa_fetch 提供支持。未填写 API Key 时使用 Exa 免费托管端点（有速率限制）；填写后改用 Exa 官方 API。',
         modeApi: 'API 模式 —— Exa 官方 API（api.exa.ai）',
         modeFree: '免费模式 —— 托管 MCP 端点（mcp.exa.ai）',
@@ -110,6 +114,8 @@ window.__ModuleLoader__.load({
     const EYE_OFF_PATH = `${EYE_CONTOUR}M2.5 2.5L13.5 13.5`
 
     const STYLE = `
+.dsh-exa-page { display: flex; flex-direction: column; gap: 16px; max-width: 720px; color: var(--dsw-alias-label-primary); }
+.dsh-exa-page-title { margin: 0; font-size: 16px; line-height: 24px; font-weight: 500; color: var(--dsw-alias-label-primary); }
 .dsh-exa-card { display: flex; flex-direction: column; gap: 12px; max-width: 720px; color: var(--dsw-alias-label-primary); }
 .dsh-exa-intro { margin: 0; font-size: 14px; line-height: 22px; color: var(--dsw-alias-label-secondary); }
 .dsh-exa-mode { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; line-height: 20px; }
@@ -381,12 +387,43 @@ window.__ModuleLoader__.load({
         }, message.text) : null)
     }
 
+    /**
+     * Navigation icon for the settings section, addressed by the matching
+     * section id. The shell owns the button, label, and row color; the mark
+     * draws in currentColor so it follows the nav row's resting/active tone.
+     */
+    function ExaSettingsIcon(props) {
+      const size = props.size
+      return h('svg', {
+        width: size, height: size, viewBox: '0 0 36 36', fill: 'none', 'aria-hidden': true,
+      },
+        h('path', { d: 'M21.2 21.2L28.6 28.6', stroke: 'currentColor', strokeWidth: 3, strokeLinecap: 'round' }),
+        h('circle', { cx: 15, cy: 15, r: 8.5, stroke: 'currentColor', strokeWidth: 2.5 }),
+        h('g', { stroke: 'currentColor', strokeWidth: 1.2, strokeLinecap: 'round' },
+          h('path', { d: 'M11.8 13.2L17.8 12.2' }),
+          h('path', { d: 'M11.8 13.2L15.2 18.4' }),
+          h('path', { d: 'M17.8 12.2L15.2 18.4' })),
+        h('g', { fill: 'currentColor' },
+          h('circle', { cx: 11.8, cy: 13.2, r: 1.5 }),
+          h('circle', { cx: 17.8, cy: 12.2, r: 1.5 }),
+          h('circle', { cx: 15.2, cy: 18.4, r: 1.5 })))
+    }
+
+    /** The Settings-panel page: a heading over the same configuration card. */
+    function ExaSettingsPage(props) {
+      const { t, form, mirror } = props
+      return h('div', { className: 'dsh-exa-page' },
+        h('h2', { className: 'dsh-exa-page-title' }, t('pageTitle')),
+        h(ExaConfigCard, { t, form, mirror }))
+    }
+
     return {
       name: 'exa-tools-client',
       inject: ['slots', 'locale', 'configForms'],
       apply(ctx) {
         ctx.effect(function* () {
           yield ctx.locale.register(NS, DICTS)
+          const t = ctx.locale.bind(NS)
           const style = document.createElement('style')
           style.dataset.plugin = PKG
           style.textContent = STYLE
@@ -401,6 +438,28 @@ window.__ModuleLoader__.load({
             locale: NS,
             inject: () => ({ form, mirror }),
           }, ExaConfigCard)))
+          // A standalone page in the Settings panel navigation. The shell
+          // never subscribes locale state, so re-register with a fresh label
+          // whenever the locale changes.
+          const registerSection = () => ctx.slots.register({
+            name: 'settings.section',
+            id: ENTRY_ID,
+            order: 35,
+            label: () => t('nav'),
+            inject: () => ({ form, mirror, t }),
+          }, ExaSettingsPage)
+          let sectionOff = registerSection()
+          yield ctx.locale.subscribe(() => {
+            try {
+              sectionOff()
+              sectionOff = registerSection()
+            } catch { /* the shell may be mid-reload; the next locale event retries */ }
+          })
+          yield () => { sectionOff() }
+          yield ctx.slots.inject('settings.section.icon', () => ctx.slots.register({
+            name: 'settings.section.icon',
+            id: ENTRY_ID,
+          }, ExaSettingsIcon))
           yield () => { style.remove() }
         }, 'dsh-exa-tools client lifecycle')
       },

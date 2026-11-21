@@ -5,7 +5,7 @@ Exa web search and fetch tools for [DeepSeek Harness](https://github.com/deepsee
 - **`exa_search`** — semantic web search: describe the ideal page in natural language, get back source URLs with titles and relevant excerpts.
 - **`exa_fetch`** — read any webpage through Exa as clean text/markdown.
 
-**No API key? It just works.** Without a key the tools use Exa's free hosted MCP endpoint (`mcp.exa.ai`, rate-limited). With a key they call the official Exa REST API (`api.exa.ai`) with your account's limits. Enter the key once on the plugin's page under **Plugins** — no config files, no restart.
+**No API key? It just works.** Without a key the tools use Exa's free hosted MCP endpoint (`mcp.exa.ai`, rate-limited). With a key they call the official Exa REST API (`api.exa.ai`) with your account's limits. Enter the key once under **Settings → Exa tools** — no config files, no restart.
 
 [中文文档](README.zh-CN.md) · [Technical documentation](docs/TECHNICAL.md) · [技术文档（中文）](docs/TECHNICAL.zh-CN.md)
 
@@ -30,7 +30,7 @@ After installation the plugin is enabled immediately (HMR). Open a **new session
 
 ## Set up the API key (optional)
 
-1. Sidebar **Plugins** → **Exa tools**.
+1. Sidebar **Settings** → **Exa tools** (the plugin's page under **Plugins** carries the same form).
 2. Paste your key into **API key** and press **Save**. Get a key at [dashboard.exa.ai/api-keys](https://dashboard.exa.ai/api-keys).
 3. The status line flips from *Free mode* to *API mode*. Changes apply to the next tool call — no restart.
 
@@ -66,7 +66,7 @@ Both tools coexist with DSH's built-in `web_search` / `web_fetch`; the system pr
 
 ## Configuration
 
-The plugin page (Plugins → Exa tools) edits the live fields: API key, `searchMaxResults`, `fetchMaxCharacters`, `searchTimeoutMs`, `fetchTimeoutMs`. Deployment-level fields are edited in the profile's `cordis.patch.yml`:
+The settings page (Settings → Exa tools) edits the live fields: API key, `searchMaxResults`, `fetchMaxCharacters`, `searchTimeoutMs`, `fetchTimeoutMs`. Deployment-level fields are edited in the profile's `cordis.patch.yml`:
 
 ```yaml
 - id: exa-tools

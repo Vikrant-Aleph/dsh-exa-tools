@@ -134,15 +134,28 @@ Rendering follows `dsh-tool-web` conventions: the standing untrusted-content not
 
 ## 5. Settings UI (browser half)
 
-`client.js` registers one React component into the Plugins page slot:
+The primary surface is a standalone page in the **Settings panel navigation**, registered into `settings.section` (the same slot third-party pages like the recycle bin use); the identical card also embeds into the Plugins page:
 
 ```js
+// Settings panel page (nav label re-registered on locale change: the shell
+// never subscribes locale state itself).
+ctx.slots.inject('settings.section', () => ctx.slots.register({
+  name: 'settings.section', id: 'exa-tools', order: 35,
+  label: () => t('nav'), inject: () => ({ form, mirror, t }),
+}, ExaSettingsPage))
+// Nav icon: registration id must equal the section id; draws in currentColor.
+ctx.slots.inject('settings.section.icon', () => ctx.slots.register({
+  name: 'settings.section.icon', id: 'exa-tools',
+}, ExaSettingsIcon))
+// Plugins-page card, keyed by the bundle package name.
 ctx.configForms.whileServed(['exa-tools'], () =>
   ctx.slots.inject('plugins.bundle.config', () => ctx.slots.register({
     name: 'plugins.bundle.config', key: 'dsh-exa-tools', locale: 'exaTools',
     inject: () => ({ form, mirror }),
   }, ExaConfigCard)))
 ```
+
+- `ExaSettingsPage` is a heading over `ExaConfigCard`; the section component receives the shell's `close` affordance plus the injected `{ form, mirror, t }`.
 
 - `plugins.bundle.config` is keyed by the **bundle package name**; the card renders on the bundle's page between its description and its rows. `whileServed` keeps the registration alive only while the Host serves the namespace.
 - Reads: `ctx.configForms.get('exa-tools')` (values + ordered writes) and `ctx.configForms.describe()` (the shared mirror, for the secret presence marker). Both are consumed with `useSyncExternalStore`; class methods are wrapped in `useCallback` to keep `this`.
