@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "Exa 搜索工具",
-    "description": "为 agent 增加 exa_search 和 exa_fetch 两个工具，由 Exa 提供支持。未填写 API Key 时使用 Exa 免费托管 MCP 端点（mcp.exa.ai，有速率限制）；填写后改用 Exa 官方 API（api.exa.ai）。在「设置 → Exa 搜索」（或「插件」页的本插件详情）中填写或清除 API Key、调整限额，保存后立即生效，无需重启。搜索词与抓取的 URL 会发送到 Exa。关闭插件即移除这两个工具。"
+    "description": "无需API Key给DSH接入Exa的免费搜索和Fetch工具，也可以填入API Key获得更好体验"
   }
 }
