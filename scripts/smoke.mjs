@@ -7,7 +7,7 @@
  *   EXA_API_KEY=... node scripts/smoke.mjs --api
  *                                     # real REST search + fetch with your key
  *
- * Requires Node >= 24 (global fetch, AbortSignal.any/timeout).
+ * Requires Node >= 20.3 (global fetch, AbortSignal.any/timeout).
  */
 
 import { ExaMcpClient } from '../lib/exa-mcp.js'

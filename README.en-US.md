@@ -11,8 +11,8 @@ Exa web search and fetch tools for [DeepSeek Harness](https://github.com/deepsee
 
 ## Requirements
 
-- DeepSeek Harness `>=0.2.2-rc.1 <0.3.0` (Desktop or Web profile)
-- Node.js `>=24.9` (the runtime DSH already ships)
+- DeepSeek Harness `>=0.1.7-rc.1` (Desktop or Web profile). The required APIs were verified against the published sources of every release line from 0.1.7-rc.1 to 0.2.2-rc.5, and fully exercised on 0.2.2-rc.5; no upper bound. The settings-page navigation icon needs `>=0.2.2-rc.1`; older releases show the default glyph. See [Version compatibility](docs/TECHNICAL.en-US.md#10-version-compatibility).
+- Node.js `>=20.3` for the plugin code itself (global `fetch`, `AbortSignal.any/timeout`). DSH's own runtime requirement may be higher — current DSH ships Node 24.
 
 ## Install
 

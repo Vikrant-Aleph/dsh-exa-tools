@@ -27,7 +27,7 @@ icon.svg            原创 36×36 图标，导出为 ./icon
 
 插入行的 **id `exa-tools`** 同时是它的 settings 命名空间（settings 服务以 `entry.options.id` 为表单键，而不是组合树路径 `include:exa-tools`）。
 
-`engines.dsh: ">=0.2.2-rc.1 <0.3.0-0"` 在安装时校验运行中的 DSH 版本。
+`engines.dsh: ">=0.1.7-rc.1"` 在安装时校验运行中的 DSH 版本；下限有实证依据，见[版本兼容](#10-版本兼容)。
 
 ## 3. Host 插件
 
@@ -192,3 +192,22 @@ ctx.configForms.whileServed(['exa-tools'], () =>
 - API 模式下的高级搜索过滤（`category`、`includeDomains`、日期范围），走 `web_search_advanced_exa` 或 REST。
 - 批量 `exa_fetch`（MCP 工具本就接受多 URL）。
 - Key 改存 credentials 服务，保持同样的只写 UI。
+
+## 10. 版本兼容
+
+`engines.dsh` 为 `>=0.1.7-rc.1`，**不设上限**。下限通过逐个里程碑版本探测已发布 npm tarball 中本插件所用 API 的存在性确定（源码级核实；运行时完整验证仅在 0.2.2-rc.5 上做过）：
+
+| 所需能力 | 最早携带的版本 |
+|---|---|
+| 原生工具定义契约（`parameters` / `output.render` / `execute`，MCP 桥的注册方式） | 0.1.5-rc.3 |
+| `settings.section` 插槽 | 0.1.5-rc.3 |
+| `plugins.bundle.config` 插槽 | 0.1.6-alpha.2 |
+| schemastery `.volatile()`（3.18.4）+ 支持 volatile 的 loader（1.0.5） | 0.1.7-rc.1 |
+| settings 表单：`volatileForm`、secret 脱敏、`configure()` | 0.1.7-rc.1 |
+| 客户端 `configForms` + `whileServed` | 0.1.7-rc.1 |
+| `settings.section.icon` 插槽（导航图标） | 0.2.2-rc.1 |
+
+- **0.1.5 / 0.1.6 无法运行本插件**：其 schemastery（3.18.2）没有 `.volatile()`，客户端 settings 包没有 `configForms`。
+- **低于 0.2.2-rc.1** 时设置导航项显示 shell 默认图标：`slots.inject('settings.section.icon', …)` 等待一个永远不会出现的声明，是无操作而非错误。
+- **老宿主上的跨副本安全**：插件自带 schemastery 3.19.0，而 0.1.7 宿主用 3.18.4 解析。两者都用 `Symbol.for('schemastery')` 标记 schema、用 `Symbol.for('cosmokit.volatile.write')` 标记 volatile 引用（已核实 cosmokit 1.8.5 / 1.8.6 / 1.9.0 协议一致），因此老 loader 能识别本插件的 schema 与 config 引用。
+- **Node**：插件代码需要 ≥20.3（用到的最新 API 是 `AbortSignal.any`）；DSH 自身的运行时下限可能更高。

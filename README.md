@@ -11,8 +11,8 @@
 
 ## 环境要求
 
-- DeepSeek Harness `>=0.2.2-rc.1 <0.3.0`（Desktop 或 Web profile）
-- Node.js `>=24.9`（DSH 自带运行时即满足）
+- DeepSeek Harness `>=0.1.7-rc.1`（Desktop 或 Web profile）。已对照 0.1.7-rc.1 至 0.2.2-rc.5 各发布线的源码核实所需 API 齐备，并在 0.2.2-rc.5 上完整实测；不设上限。设置页的导航图标需要 `>=0.2.2-rc.1`，更老版本显示默认图标。详见[技术文档的版本兼容一节](docs/TECHNICAL.md#10-版本兼容)。
+- 插件代码本身需要 Node.js `>=20.3`（全局 `fetch`、`AbortSignal.any/timeout`）。DSH 自身的运行时要求可能更高——当前 DSH 自带 Node 24。
 
 ## 安装
 

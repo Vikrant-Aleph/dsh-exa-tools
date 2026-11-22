@@ -27,7 +27,7 @@ icon.svg            original 36×36 mark, exported as ./icon
 
 The inserted row's **id `exa-tools`** is also its settings namespace (the settings service keys forms by `entry.options.id`, not the composed tree path `include:exa-tools`).
 
-`engines.dsh: ">=0.2.2-rc.1 <0.3.0-0"` gates installation against the running DSH.
+`engines.dsh: ">=0.1.7-rc.1"` gates installation against the running DSH; the floor is evidence-based, see [Version compatibility](#10-version-compatibility).
 
 ## 3. Host plugin
 
@@ -193,3 +193,22 @@ A local-directory install **links** the checkout: the profile's `node_modules/ds
 - Advanced search filters in API mode (`category`, `includeDomains`, date ranges) via `web_search_advanced_exa` or REST.
 - Batch `exa_fetch` (the MCP tool already accepts multiple URLs).
 - Credentials-service storage for the key, keeping the same write-only UI.
+
+## 10. Version compatibility
+
+`engines.dsh` is `>=0.1.7-rc.1` with **no upper bound**. The floor was established by probing the published npm tarballs of each milestone release for the exact APIs this plugin uses (source presence; runtime verification was done on 0.2.2-rc.5 only):
+
+| Requirement | First release carrying it |
+|---|---|
+| Raw tool-definition contract (`parameters` / `output.render` / `execute`, as the MCP bridge registers) | 0.1.5-rc.3 |
+| `settings.section` slot | 0.1.5-rc.3 |
+| `plugins.bundle.config` slot | 0.1.6-alpha.2 |
+| schemastery `.volatile()` (3.18.4) + volatile-aware loader (1.0.5) | 0.1.7-rc.1 |
+| Settings forms: `volatileForm`, secret redaction, `configure()` | 0.1.7-rc.1 |
+| Client `configForms` + `whileServed` | 0.1.7-rc.1 |
+| `settings.section.icon` slot (nav icon) | 0.2.2-rc.1 |
+
+- **0.1.5 / 0.1.6 cannot run the plugin**: their schemastery (3.18.2) has no `.volatile()` and the client settings package has no `configForms`.
+- **Below 0.2.2-rc.1** the settings nav entry shows the shell's default glyph: `slots.inject('settings.section.icon', …)` waits for a declaration that never arrives, which is a no-op, not an error.
+- **Cross-copy safety on older hosts**: the plugin ships its own schemastery 3.19.0 while a 0.1.7 host parses with 3.18.4. Both mark schemas with `Symbol.for('schemastery')` and volatile references with `Symbol.for('cosmokit.volatile.write')` (verified identical in cosmokit 1.8.5 / 1.8.6 / 1.9.0), so the older loader recognizes this plugin's schema and config references.
+- **Node**: the plugin code needs ≥20.3 (`AbortSignal.any` is the newest API used); DSH's own runtime floor may be higher.
