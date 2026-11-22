@@ -23,7 +23,7 @@ function makeCtx() {
 apply(makeCtx(), new Config({}))
 console.log('registered tools:', registrations.map(d => d.name).join(', '))
 console.log('prompt sections:', sections.map(s => s.name).join(', '))
-if (registrations.length !== 2) throw new Error('expected both tools registered')
+if (registrations.length !== 5) throw new Error('expected all five tools registered')
 
 const search = registrations.find(d => d.name === 'exa_search')
 const fetchTool = registrations.find(d => d.name === 'exa_fetch')
@@ -82,6 +82,43 @@ if (!Array.isArray(fbValue.sources) || fbValue.sources.length === 0) throw new E
 const fbText = fbSearch.output.render({}, fbValue)[0].text
 if (!fbText.includes('free endpoint')) throw new Error('render missing fallback notice')
 console.log('fallback ok:', fbValue.fallback.slice(0, 80))
+
+// API-only tools: registered, guarded without a key, and NEVER falling back.
+const apiOnly = []
+const aoCtx = makeCtx()
+aoCtx.tools.register = def => { apiOnly.push(def); return () => {} }
+apply(aoCtx, new Config({}))
+const aoArgs = {
+  exa_answer: { query: 'test' },
+  exa_search_advanced: { query: 'test' },
+  exa_find_similar: { url: 'https://example.com' },
+}
+for (const name of Object.keys(aoArgs)) {
+  if (!apiOnly.some(d => d.name === name)) throw new Error(`missing API-only tool: ${name}`)
+  try {
+    await apiOnly.find(d => d.name === name).execute(aoArgs[name], exec)
+    throw new Error(`${name} succeeded without a key`)
+  } catch (error) {
+    if (!/requires an Exa API key/.test(error.message)) throw error
+  }
+}
+console.log('API-only no-key guard ok')
+
+const aoKeyed = []
+const aoKeyedCtx = makeCtx()
+aoKeyedCtx.tools.register = def => { aoKeyed.push(def); return () => {} }
+// fallbackToFree defaults to true — these tools must ignore it.
+apply(aoKeyedCtx, new Config({ apiKey: 'invalid-key-for-test' }))
+for (const [name, args] of Object.entries(aoArgs)) {
+  try {
+    await aoKeyed.find(d => d.name === name).execute(args, exec)
+    throw new Error(`${name} unexpectedly succeeded with an invalid key`)
+  } catch (error) {
+    if (!/HTTP 401/.test(error.message)) throw error
+    if (/free endpoint/i.test(error.message)) throw new Error(`${name} must not fall back: ${error.message}`)
+  }
+}
+console.log('API-only no-fallback ok (401 surfaced for all three)')
 
 for (const cleanup of cleanups) await cleanup()
 console.log('\nAPPLY TEST OK')

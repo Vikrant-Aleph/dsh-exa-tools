@@ -36,7 +36,7 @@ icon.svg            原创 36×36 图标，导出为 ./icon
 `Config` 是 schemastery object，字段分两类：
 
 - **Volatile**（`.volatile()`）：`apiKey`、`searchMaxResults`、`fetchMaxCharacters`、`searchTimeoutMs`、`fetchTimeoutMs`、`fallbackToFree`。loader 把它们解析为稳定引用；插件在调用时读 `config.field.get()`，settings 写入会**就地**提交新值——不重挂载、无过期闭包。
-- **普通字段**：`search`、`fetch`、`apiBaseUrl`、`mcpBaseUrl`。在 profile patch 中编辑，修改会重挂载插件。
+- **普通字段**：`search`、`fetch`、`answer`、`advancedSearch`、`findSimilar`、`apiBaseUrl`、`mcpBaseUrl`。在 profile patch 中编辑，修改会重挂载插件。
 
 `apiKey` 额外带 `.role('secret')`。settings 子系统从所有跨线响应中剥离 secret 字段，改发一个旁路记录：`secrets: [{ path: ['apiKey'], set: true|false }]`。客户端只知道 Key **是否存在**，永远拿不到值。
 
@@ -136,6 +136,17 @@ POST tools/call                → 200，SSE（或 JSON）；按 JSON-RPC id 匹
 
 有 Key 时每次调用先走 REST；任何失败（402 额度耗尽、429 限流、401/403 密钥失效、5xx、网络错误、超时）且 `fallbackToFree` 开启（默认）时，自动改用免费 MCP 端点重试，并把简短原因（≤160 字符）写入规范输出的可选 `fallback` 字段，渲染为结果首行提示：`(Exa API unavailable: <原因> — this result comes from the free endpoint.)`。两端都失败时抛出合并错误。调用方取消（`exec.signal` aborted）不触发回退，原样重抛。每次尝试各自享有完整的超时预算（最坏总耗时约为配置的两倍）。无 Key 时本就直接走免费端点，无所谓回退。
 
+### 4.5 API 专用工具（不回退）
+
+`exa_answer`（POST /answer）、`exa_search_advanced`（POST /search + category / includeDomains / excludeDomains / startPublishedDate / endPublishedDate）、`exa_find_similar`（POST /findSimilar）仅走 REST：
+
+- 注册带 `{ when: () => keyOf().length > 0 }` 条件，由注册表逐步求值——无 Key 时三个工具不出现在模型工具集；设置 Key 后下一步即生效，无需重启。`execute` 内另有 `requireKey` 守卫兜底（老宿主忽略 when 选项时也不会静默失败）。
+- **不回退**：免费端点没有这些能力，失败直接抛出映射后的 REST 错误，与 `fallbackToFree` 无关。
+- 类别枚举以当前 OpenAPI 为准：company / publication / news / personal site / financial report / people（其他字符串作为类别提示被接受）。company/people 不支持日期过滤，people 不支持 excludeDomains，违反返回 400——参数描述里已注明。
+- `/findSimilar` 上游已标记 deprecated（官方推荐 /search + 描述性 query），仍可用；README 与本节如实注明。
+- 输出：`exa_answer` 为 `{answer, citations[]}`，渲染为「不可信提示 + 回答 + Sources + 引用提示」；另两个复用 `exa_search` 的 `{sources}` 规范输出与渲染（摘录同样 800 字符截断）。
+- 超时复用 `searchTimeoutMs`；并发安全声明与其余工具一致。
+
 ## 5. 设置界面
 
 设置页与卡片在 Web 端和桌面端同样可用：客户端模块运行于两者的渲染层，注册与传输契约一致。
@@ -218,6 +229,7 @@ ctx.configForms.whileServed(['exa-tools'], () =>
 - **低于 0.2.2-rc.1** 时设置导航项显示 shell 默认图标：`slots.inject('settings.section.icon', …)` 等待一个永远不会出现的声明，是无操作而非错误。
 - **老宿主上的跨副本安全**：插件自带 schemastery 3.19.0，而 0.1.7 宿主用 3.18.4 解析。两者都用 `Symbol.for('schemastery')` 标记 schema、用 `Symbol.for('cosmokit.volatile.write')` 标记 volatile 引用（已核实 cosmokit 1.8.5 / 1.8.6 / 1.9.0 协议一致），因此老 loader 能识别本插件的 schema 与 config 引用。
 - **Node**：插件代码需要 ≥20.3（用到的最新 API 是 `AbortSignal.any`）；DSH 自身的运行时下限可能更高。
+- **条件注册**：`register(def, { when })` 是 0.2.x 的 tools 契约；更老的宿主若忽略该选项，三个 API 专用工具会保持可见，但无 Key 调用时得到明确的「需要 API Key」错误（requireKey 守卫）。
 
 ## 11. 发布流水线
 

@@ -16,6 +16,8 @@
 - Key 在「设置 → Exa 搜索」填写，不用改配置文件，不用重启立即生效；
 - API 失败（额度耗尽、限流、密钥失效、网络错误）时自动回退到免费端点，结果中会注明回退原因，可在设置页关闭。
 
+另有三个仅 API 可用的工具——`exa_answer`（问答）、`exa_search_advanced`（过滤搜索）、`exa_find_similar`（相似页面）：填 Key 后自动出现，失败不回退。
+
 [English](README.en-US.md) · [技术文档](docs/TECHNICAL.md) · [Technical documentation](docs/TECHNICAL.en-US.md)
 
 ## 环境要求
@@ -78,7 +80,40 @@ Key 保存在 profile 的 `cordis.patch.yml` 中（与其他插件设置同一�
 
 返回 `Fetched <url>` 加干净正文。内容被截断时会标注，模型可据此抓取更具体的章节。
 
-两个工具与 DSH 内置的 `web_search` / `web_fetch` 并存；系统提示词会告诉模型各自的用途，并把返回内容视为不可信数据。
+### `exa_answer`（需 API Key）
+
+| 参数 | 类型 | 说明 |
+|---|---|---|
+| `query` | string，必填 | 自然语言问题或指令。 |
+
+返回 Exa 生成的回答 + 引用来源列表。回答本身基于网页内容生成，同样视为不可信数据。
+
+### `exa_search_advanced`（需 API Key）
+
+| 参数 | 类型 | 说明 |
+|---|---|---|
+| `query` | string，必填 | 自然语言描述想找的页面。 |
+| `num_results` | integer，可选 | 返回条数（默认 5，受 `searchMaxResults` 上限）。 |
+| `category` | string，可选 | 聚焦类别：company / publication / news / personal site / financial report / people。company 和 people 忽略日期过滤；people 还忽略 exclude_domains。 |
+| `include_domains` | string[]，可选 | 只返回这些域名的结果（支持 `*.example.com`、`example.com/docs`）。 |
+| `exclude_domains` | string[]，可选 | 排除这些域名。 |
+| `start_published_date` / `end_published_date` | string，可选 | ISO 8601 发布时间范围。 |
+
+返回与 `exa_search` 相同的来源列表。
+
+### `exa_find_similar`（需 API Key）
+
+| 参数 | 类型 | 说明 |
+|---|---|---|
+| `url` | string，必填 | 参考页面的绝对 http(s) URL。 |
+| `num_results` | integer，可选 | 返回条数（默认 5，受上限）。 |
+| `exclude_source_domain` | boolean，可选 | 排除与参考 URL 同域名的结果。 |
+
+返回相似页面的来源列表。注：上游 `/findSimilar` 端点已被 Exa 标记弃用（官方推荐用描述性 query 走 `/search`），目前仍可用。
+
+三个 API 专用工具只在配置了 Key 时出现在工具集里（设置 Key 后下一步即生效），失败直接报错，**不回退**免费端点。
+
+这些工具与 DSH 内置的 `web_search` / `web_fetch` 并存；系统提示词会告诉模型各自的用途，并把返回内容视为不可信数据。
 
 ## 配置项
 
@@ -103,6 +138,7 @@ Key 保存在 profile 的 `cordis.patch.yml` 中（与其他插件设置同一�
 | `fetchTimeoutMs` | `60000` | 是 | 单次抓取超时（毫秒） |
 | `fallbackToFree` | `true` | 是 | API 失败时自动回退免费端点 |
 | `search` / `fetch` | `true` | 否（YAML） | 是否注册对应工具 |
+| `answer` / `advancedSearch` / `findSimilar` | `true` | 否（YAML） | 是否注册对应 API 专用工具 |
 | `apiBaseUrl` / `mcpBaseUrl` | 官方端点 | 否（YAML） | 代理或自建 MCP 时覆盖 |
 
 ## 开发

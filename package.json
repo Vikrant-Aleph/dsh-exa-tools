@@ -1,6 +1,6 @@
 {
   "name": "dsh-exa-tools",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "无需API Key给DSH接入Exa的免费搜索和Fetch工具，也可以填入API Key获得更好体验",
   "type": "module",
   "license": "MIT",

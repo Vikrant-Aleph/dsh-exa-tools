@@ -36,7 +36,7 @@ The inserted row's **id `exa-tools`** is also its settings namespace (the settin
 `Config` is a schemastery object. Two field classes:
 
 - **Volatile** (`.volatile()`): `apiKey`, `searchMaxResults`, `fetchMaxCharacters`, `searchTimeoutMs`, `fetchTimeoutMs`, `fallbackToFree`. The loader parses them into stable references; the plugin reads `config.field.get()` at call time, and a settings write commits new values **in place** — no remount, no stale closures.
-- **Ordinary**: `search`, `fetch`, `apiBaseUrl`, `mcpBaseUrl`. Edited in the profile patch; a change remounts the plugin.
+- **Ordinary**: `search`, `fetch`, `answer`, `advancedSearch`, `findSimilar`, `apiBaseUrl`, `mcpBaseUrl`. Edited in the profile patch; a change remounts the plugin.
 
 `apiKey` additionally carries `.role('secret')`. The settings subsystem strips secret fields from every wire response and ships a sidecar instead: `secrets: [{ path: ['apiKey'], set: true|false }]`. The client learns *whether* a key exists, never its value.
 
@@ -136,6 +136,17 @@ Rendering follows `dsh-tool-web` conventions: the standing untrusted-content not
 
 With a key, each call tries REST first; on any failure (402 quota, 429 rate limit, 401/403 invalid key, 5xx, network, timeout) with `fallbackToFree` on (the default), it retries on the free MCP endpoint and writes a short reason (≤160 chars) into the optional `fallback` field of the canonical output, rendered as the result's first line: `(Exa API unavailable: <reason> — this result comes from the free endpoint.)`. If both backends fail, a combined error is thrown. Caller cancellation (`exec.signal` aborted) never falls back and rethrows untouched. Each attempt gets its own full timeout budget (worst-case total ≈ twice the configured budget). Without a key the free endpoint is the primary path, so there is nothing to fall back from.
 
+### 4.5 API-only tools (no fallback)
+
+`exa_answer` (POST /answer), `exa_search_advanced` (POST /search + category / includeDomains / excludeDomains / startPublishedDate / endPublishedDate), and `exa_find_similar` (POST /findSimilar) are REST-only:
+
+- Registered with `{ when: () => keyOf().length > 0 }`, evaluated per step by the registry — without a key the three tools are absent from the model's toolset; setting a key admits them on the next step, no restart. A `requireKey` guard inside `execute` backstops hosts that ignore the `when` option.
+- **No fallback**: the free endpoint cannot serve these capabilities, so failures throw the mapped REST error regardless of `fallbackToFree`.
+- The category enum follows the current OpenAPI: company / publication / news / personal site / financial report / people (other strings are accepted as category hints). company/people do not support date filters and people does not support excludeDomains; violations return 400 — noted in the parameter descriptions.
+- `/findSimilar` is marked deprecated upstream (Exa recommends /search with a descriptive query) but is still served; the README and this section say so.
+- Outputs: `exa_answer` is `{answer, citations[]}`, rendered as notice + answer + Sources + cite instruction; the other two reuse `exa_search`'s canonical `{sources}` output and rendering (same 800-char snippet cap).
+- Timeouts reuse `searchTimeoutMs`; concurrency-safety declarations match the other tools.
+
 ## 5. Settings UI
 
 The page and card work identically in the Web client and the Desktop app: the client module runs in both renderers and uses the same registration and transport contracts.
@@ -219,6 +230,7 @@ A local-directory install **links** the checkout: the profile's `node_modules/ds
 - **Below 0.2.2-rc.1** the settings nav entry shows the shell's default glyph: `slots.inject('settings.section.icon', …)` waits for a declaration that never arrives, which is a no-op, not an error.
 - **Cross-copy safety on older hosts**: the plugin ships its own schemastery 3.19.0 while a 0.1.7 host parses with 3.18.4. Both mark schemas with `Symbol.for('schemastery')` and volatile references with `Symbol.for('cosmokit.volatile.write')` (verified identical in cosmokit 1.8.5 / 1.8.6 / 1.9.0), so the older loader recognizes this plugin's schema and config references.
 - **Node**: the plugin code needs ≥20.3 (`AbortSignal.any` is the newest API used); DSH's own runtime floor may be higher.
+- **Conditional registration**: `register(def, { when })` is part of the 0.2.x tools contract; on older hosts that ignore the option the three API-only tools stay visible, but a keyless call returns the explicit requireKey error instead of failing silently.
 
 ## 11. Release pipeline
 

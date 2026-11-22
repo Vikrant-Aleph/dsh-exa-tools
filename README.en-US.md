@@ -16,6 +16,8 @@ Exa web search and fetch tools for [DeepSeek Harness](https://github.com/deepsee
 - Enter the key under Settings → Exa tools — no config files, no restart, effective immediately;
 - If the API fails (quota exhausted, rate limit, invalid key, network), calls automatically fall back to the free endpoint, the result notes the reason, and the fallback can be turned off on the settings page.
 
+Three more tools are API-only — `exa_answer` (Q&A), `exa_search_advanced` (filtered search), `exa_find_similar` (similar pages): they appear once a key is set and never fall back.
+
 [中文文档](README.md) · [Technical documentation](docs/TECHNICAL.en-US.md) · [技术文档](docs/TECHNICAL.md)
 
 ## Requirements
@@ -78,7 +80,40 @@ Returns a source list: `- [title](url) — excerpt (publishedDate)`, each excerp
 
 Returns `Fetched <url>` plus the page body as clean text/markdown. Truncated content is marked so the model can fetch a more specific section.
 
-Both tools coexist with DSH's built-in `web_search` / `web_fetch`; the system prompt tells the model what each returns and to treat the content as untrusted data.
+### `exa_answer` (API key required)
+
+| Parameter | Type | Description |
+|---|---|---|
+| `query` | string, required | Natural-language question or instruction. |
+
+Returns an Exa-generated answer plus its citation sources. The answer itself is generated from web content and stays untrusted.
+
+### `exa_search_advanced` (API key required)
+
+| Parameter | Type | Description |
+|---|---|---|
+| `query` | string, required | Natural-language description of the page you want to find. |
+| `num_results` | integer, optional | Results to return (default 5, capped by `searchMaxResults`). |
+| `category` | string, optional | Focus category: company / publication / news / personal site / financial report / people. company and people ignore date filters; people also ignores exclude_domains. |
+| `include_domains` | string[], optional | Only results from these domains (supports `*.example.com`, `example.com/docs`). |
+| `exclude_domains` | string[], optional | Never return results from these domains. |
+| `start_published_date` / `end_published_date` | string, optional | ISO 8601 published-date range. |
+
+Returns the same source list as `exa_search`.
+
+### `exa_find_similar` (API key required)
+
+| Parameter | Type | Description |
+|---|---|---|
+| `url` | string, required | Absolute http(s) URL of the reference page. |
+| `num_results` | integer, optional | Results to return (default 5, capped). |
+| `exclude_source_domain` | boolean, optional | Exclude results from the reference URL's own domain. |
+
+Returns a source list of similar pages. Note: the upstream `/findSimilar` endpoint is marked deprecated by Exa (they recommend `/search` with a descriptive query) but is still served.
+
+The three API-only tools appear in the toolset only while a key is configured (effective the next step after saving one); failures surface as errors and **never fall back** to the free endpoint.
+
+These tools coexist with DSH's built-in `web_search` / `web_fetch`; the system prompt tells the model what each returns and to treat the content as untrusted data.
 
 ## Configuration
 
@@ -103,6 +138,7 @@ The settings page (Settings → Exa tools) edits the live fields: API key, `sear
 | `fetchTimeoutMs` | `60000` | yes | Per-call fetch budget (ms) |
 | `fallbackToFree` | `true` | yes | Fall back to the free endpoint when the API fails |
 | `search` / `fetch` | `true` | no (YAML) | Register each tool |
+| `answer` / `advancedSearch` / `findSimilar` | `true` | no (YAML) | Register each API-only tool |
 | `apiBaseUrl` / `mcpBaseUrl` | official endpoints | no (YAML) | Override for proxies or self-hosted MCP |
 
 ## Development
