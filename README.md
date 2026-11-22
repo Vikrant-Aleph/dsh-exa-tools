@@ -131,19 +131,6 @@ pnpm test:client      # 设置页 / 导航图标 / 卡片注册
 - API Key 存于 profile patch（磁盘明文）；本版本未使用 DSH 的 credentials 服务。
 - 暂不支持 `EXA_API_KEY` 环境变量回退——Key 来自插件页面或 profile patch。
 
-## 发布
-
-推送 `v*` 版本标签即自动发布：GitHub Actions 会校验标签与 `package.json` 版本一致、安装依赖、跑客户端测试、打包 tgz，并创建带附件的 GitHub Release。
-
-```sh
-# 1. 修改 package.json 的 version，提交并推送
-git tag v0.1.1
-git push origin v0.1.1
-# 2. Actions 自动建 Release（附 tgz）；配置了 NPM_TOKEN 时同步发布 npm
-```
-
-npm 自动发布的一次性准备：仓库 **Settings → Secrets and variables → Actions** 新增 `NPM_TOKEN`（npmjs.com 的 Automation token）。未配置时 workflow 自动跳过 npm 发布，只建 Release。
-
 ## 许可证
 
 [MIT](LICENSE)

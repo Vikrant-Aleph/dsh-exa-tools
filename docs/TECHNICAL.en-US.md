@@ -218,3 +218,14 @@ A local-directory install **links** the checkout: the profile's `node_modules/ds
 ## 11. Release pipeline
 
 `.github/workflows/release.yml`, triggered by pushing a `v*` tag: verify the tag matches the `package.json` version → `pnpm install --frozen-lockfile` → client tests (`test:client`, offline and deterministic; `smoke` / `test:apply` hit the live Exa endpoints and stay local dev tools) → `pnpm pack` → `softprops/action-gh-release` creates the Release with the tarball attached and generated notes → `npm publish --access public` when the repository's `NPM_TOKEN` secret is set (skipped otherwise). The workflow needs `contents: write`.
+
+Cutting a release:
+
+```sh
+# 1. Bump version in package.json, commit and push
+git tag v0.1.1
+git push origin v0.1.1
+# 2. Actions creates the Release (with tgz); also publishes to npm when NPM_TOKEN is set
+```
+
+One-time setup for npm publishing: add an `NPM_TOKEN` secret (an npmjs.com Automation token, which bypasses 2FA) under **Settings → Secrets and variables → Actions**. Without it the workflow skips npm and only creates the Release; you can also publish manually with `npm publish --access public` (interactive authorization if the account has 2FA). A version cannot be published twice: if you published manually, pushing the same tag again after configuring the token fails at the npm step.

@@ -217,3 +217,14 @@ ctx.configForms.whileServed(['exa-tools'], () =>
 ## 11. 发布流水线
 
 `.github/workflows/release.yml`，推送 `v*` 标签触发：校验标签与 `package.json` 版本一致 → `pnpm install --frozen-lockfile` → 客户端测试（`test:client`，离线且确定；`smoke` / `test:apply` 访问真实 Exa 端点，保留为本地开发工具）→ `pnpm pack` → `softprops/action-gh-release` 创建带 tgz 附件的 Release（自动生成 release notes）→ 仓库配置了 `NPM_TOKEN` secret 时执行 `npm publish --access public`（未配置则跳过）。workflow 需要 `contents: write` 权限。
+
+发版步骤：
+
+```sh
+# 1. 修改 package.json 的 version，提交并推送
+git tag v0.1.1
+git push origin v0.1.1
+# 2. Actions 自动建 Release（附 tgz）；配置了 NPM_TOKEN 时同步发布 npm
+```
+
+npm 自动发布的一次性准备：仓库 **Settings → Secrets and variables → Actions** 新增 `NPM_TOKEN`（npmjs.com 的 Automation token，不受 2FA 限制）。未配置时 workflow 跳过 npm 发布，只建 Release；也可以本地手动 `npm publish --access public`（账号开启 2FA 时需交互授权）。注意同一版本不可重复发布：手动发过的版本，配置 token 后再推同名标签会在 npm 步骤失败。

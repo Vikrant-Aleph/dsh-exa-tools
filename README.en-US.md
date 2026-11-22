@@ -131,19 +131,6 @@ See [docs/TECHNICAL.en-US.md](docs/TECHNICAL.en-US.md) for the architecture: bun
 - The API key is stored in the profile patch (plain text on disk); DSH's credentials service is not used in this version.
 - No `EXA_API_KEY` environment fallback yet — the key comes from the plugin page or the profile patch.
 
-## Publishing
-
-Pushing a `v*` version tag releases automatically: GitHub Actions verifies the tag matches `package.json`, installs dependencies, runs the client tests, packs the tarball, and creates a GitHub Release with the asset attached.
-
-```sh
-# 1. Bump version in package.json, commit and push
-git tag v0.1.1
-git push origin v0.1.1
-# 2. Actions creates the Release (with tgz); also publishes to npm when NPM_TOKEN is set
-```
-
-One-time setup for npm publishing: add an `NPM_TOKEN` secret (an npmjs.com Automation token) under **Settings → Secrets and variables → Actions**. Without it the workflow skips npm and only creates the Release.
-
 ## License
 
 [MIT](LICENSE)
