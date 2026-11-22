@@ -1,4 +1,8 @@
-# <img src="icon.svg" width="32" height="32" alt=""> dsh-exa-tools
+<h1 align="center">
+  <img src="icon.svg" width="64" height="64" alt="">
+  <br>
+  dsh-exa-tools
+</h1>
 
 给 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）接入 Exa 搜索的插件，为 profile 中的每个 agent 增加两个工具：
 
