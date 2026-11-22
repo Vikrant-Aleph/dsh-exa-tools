@@ -1,5 +1,5 @@
 /**
- * dsh-exa-tools — browser half.
+ * dsh-exa-tools — client half (runs in the Web and Desktop renderers).
  *
  * Registers the plugin's configuration card into the Plugins page's
  * `plugins.bundle.config` slot (keyed by this package name), so the bundle's

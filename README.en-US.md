@@ -40,7 +40,7 @@ Without a key everything works out of the box on Exa's free tier; the free endpo
 
 ### Where the key lives
 
-The key is stored in your profile's `cordis.patch.yml` (the same place as other plugin settings). It is a *write-only secret* in the UI: DSH never sends the stored value back to the browser — the input only shows whether a key is configured. Treat the profile directory like any other credential store: it is plain text on disk, protected by your OS user permissions.
+The key is stored in your profile's `cordis.patch.yml` (the same place as other plugin settings). It is a *write-only secret* in the UI: DSH never sends the stored value back to the client — the input only shows whether a key is configured. Treat the profile directory like any other credential store: it is plain text on disk, protected by your OS user permissions.
 
 ## Tools
 
@@ -98,7 +98,7 @@ lib/http.js         fetch with fused timeout/cancellation; REST error mapping
 lib/exa-mcp.js      minimal MCP streamable-HTTP client (free endpoint)
 lib/exa-rest.js     Exa REST client (/search, /contents)
 lib/format.js       MCP text parsing, canonical outputs, model-facing rendering
-client.js           browser half: configuration card on the Plugins page
+client.js           client half: settings page + Plugins-page card (Web and Desktop)
 cordis.patch.yml    bundle patch inserting the exa-tools row
 locale/             plugin display metadata (en, zh)
 scripts/smoke.mjs   backend smoke test against the live endpoints

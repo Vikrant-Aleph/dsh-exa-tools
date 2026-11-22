@@ -40,7 +40,7 @@
 
 ### Key 存在哪里
 
-Key 保存在 profile 的 `cordis.patch.yml` 中（与其他插件设置同一位置）。它在界面上是**只写密钥**：DSH 从不把已保存的值回传给浏览器，输入框只显示「是否已配置」。请像对待其他凭据文件一样对待 profile 目录：磁盘上是明文，安全性取决于你的系统用户权限。
+Key 保存在 profile 的 `cordis.patch.yml` 中（与其他插件设置同一位置）。它在界面上是**只写密钥**：DSH 从不把已保存的值回传给客户端，输入框只显示「是否已配置」。请像对待其他凭据文件一样对待 profile 目录：磁盘上是明文，安全性取决于你的系统用户权限。
 
 ## 工具说明
 
@@ -98,7 +98,7 @@ lib/http.js         融合超时/取消的 fetch；REST 错误映射
 lib/exa-mcp.js      极简 MCP streamable-HTTP 客户端（免费端点）
 lib/exa-rest.js     Exa REST 客户端（/search、/contents）
 lib/format.js       MCP 文本解析、规范化输出、面向模型的渲染
-client.js           浏览器端：Plugins 页配置卡片
+client.js           客户端：设置页 + Plugins 页卡片（Web/桌面通用）
 cordis.patch.yml    插入 exa-tools 行的 bundle patch
 locale/             插件显示元数据（en、zh）
 scripts/smoke.mjs   后端冒烟测试（真实端点）

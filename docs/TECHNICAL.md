@@ -19,7 +19,7 @@ DSH bundle 是一个在 `package.json` 里声明 `dsh.bundle.patch` 的包；YAM
 package.json        包名 dsh-exa-tools；dsh.bundle.patch；dsh.client（platform web）
 cordis.patch.yml    - insert: [{ id: exa-tools, name: dsh-exa-tools, config: {} }]
 index.js            Host 端：export const Config、inject、apply(ctx, config)
-client.js           浏览器端：window.__ModuleLoader__.load({ id, factory })
+client.js           客户端（Web/桌面通用）：window.__ModuleLoader__.load({ id, factory })
 lib/*.js            后端客户端 + 格式化（纯模块，不 import cordis）
 locale/{en,zh}.json 插件管理器显示的 meta.title / meta.description
 icon.svg            原创 36×36 图标，导出为 ./icon
@@ -38,7 +38,7 @@ icon.svg            原创 36×36 图标，导出为 ./icon
 - **Volatile**（`.volatile()`）：`apiKey`、`searchMaxResults`、`fetchMaxCharacters`、`searchTimeoutMs`、`fetchTimeoutMs`。loader 把它们解析为稳定引用；插件在调用时读 `config.field.get()`，settings 写入会**就地**提交新值——不重挂载、无过期闭包。
 - **普通字段**：`search`、`fetch`、`apiBaseUrl`、`mcpBaseUrl`。在 profile patch 中编辑，修改会重挂载插件。
 
-`apiKey` 额外带 `.role('secret')`。settings 子系统从所有跨线响应中剥离 secret 字段，改发一个旁路记录：`secrets: [{ path: ['apiKey'], set: true|false }]`。浏览器只知道 Key **是否存在**，永远拿不到值。
+`apiKey` 额外带 `.role('secret')`。settings 子系统从所有跨线响应中剥离 secret 字段，改发一个旁路记录：`secrets: [{ path: ['apiKey'], set: true|false }]`。客户端只知道 Key **是否存在**，永远拿不到值。
 
 ### apply 生命周期
 
@@ -132,7 +132,9 @@ POST tools/call                → 200，SSE（或 JSON）；按 JSON-RPC id 匹
 
 渲染沿用 `dsh-tool-web` 约定：固定的不可信内容提示、`- [标题](url) — 摘录 (日期)` 来源行、引用提示、截断尾注。摘录折叠空白并截断到 800 字符（不切开代理对）。抓取截断判据为 `text.length >= maxCharacters`（启发式；恰好等长的页面可能被标记）。
 
-## 5. 设置界面（浏览器端）
+## 5. 设置界面
+
+设置页与卡片在 Web 端和桌面端同样可用：客户端模块运行于两者的渲染层，注册与传输契约一致。
 
 主入口是**「设置」面板导航中的独立页面**，注册进 `settings.section`（与会话回收站等第三方页面同一插槽）；同一张卡片也嵌入 Plugins 页：
 
@@ -160,7 +162,7 @@ ctx.configForms.whileServed(['exa-tools'], () =>
 - 读：`ctx.configForms.get('exa-tools')`（值 + 有序写入）与 `ctx.configForms.describe()`（共享 mirror，取 secret 存在标记）。两者都用 `useSyncExternalStore` 消费；类方法用 `useCallback` 包一层以保住 `this`。
 - 写：草稿暂存，一次「保存」提交 `form.mutate(ops, revision)`——变更字段 `set`，清空的数字字段 `unset`（恢复组合默认值；表单会说明这一语义并显示各字段默认值）。revision 围栏在**开始编辑时**取快照，因此别处的并发写入会被拒绝而非静默覆盖；被拒时自动重载最新值、保留草稿并重置围栏，用户核对后可重试。数字校验错误会指明字段、标 `aria-invalid`、展开折叠并聚焦该输入框。成功消息带 `role="status"` 播报。「清除 API Key」即 `form.unset('apiKey')`。
 - Key 输入框只写（`type=password`、`autocomplete=new-password`、草稿可切换显示）。占位符反映存在标记：「已配置 —— 输入新值可替换」/「粘贴 Exa API Key」。
-- 样式：`dsh-exa-` 前缀的自包含控件，颜色全部走 `--dsw-alias-*` 主题令牌（样式范式抄自官方 Models 设置页）。不把任何 Harness Client 包当模块 import；React 来自浏览器模块表（`require('react')`）。
+- 样式：`dsh-exa-` 前缀的自包含控件，颜色全部走 `--dsw-alias-*` 主题令牌（样式范式抄自官方 Models 设置页）。不把任何 Harness Client 包当模块 import；React 来自客户端模块表（`require('react')`）。
 - 字典（en/zh）经 `ctx.locale` 注册；所有可见文本走 `t`。
 
 ## 6. 模块解析
@@ -175,7 +177,7 @@ ctx.configForms.whileServed(['exa-tools'], () =>
 ## 7. 安全与隐私
 
 - 搜索词与抓取 URL 发送到 Exa（`mcp.exa.ai` 或 `apiBaseUrl`）。系统提示词与工具输出把所有返回内容标记为外部不可信数据。
-- API Key 仅以 `x-api-key` 头发往 `apiBaseUrl`。不记日志、不进错误消息、不回传浏览器（secret 脱敏）。
+- API Key 仅以 `x-api-key` 头发往 `apiBaseUrl`。不记日志、不进错误消息、不回传客户端（secret 脱敏）。
 - 静态存储时 Key 与其他插件配置一样位于 profile 的 `cordis.patch.yml`——明文，由操作系统权限保护。未来版本可迁移到 DSH credentials 服务。
 - `exa_fetch` 接受任意 http(s) URL，包括环回/内网地址（与内置 `web_fetch` 姿态一致）；需要逐次确认的部署应添加 `tools/pre-execute` 策略。
 
@@ -183,8 +185,8 @@ ctx.configForms.whileServed(['exa-tools'], () =>
 
 - `scripts/smoke.mjs` —— 真实后端测试：经 `lib/*` 的免费搜索/抓取、REST 401 错误路径（`--rest`）、带 `EXA_API_KEY` 的真实 REST（`--api`）。
 - `scripts/apply-test.mjs` —— 用 mock cordis context 跑 `apply()`，再执行注册出的定义：免费模式规范值 + 渲染、参数校验、API 模式接线（无效 Key → 映射后的 401）。
-- `scripts/client-test.mjs` —— 经 mock `__ModuleLoader__` 加载 `client.js`，用 mock context 跑浏览器端 `apply()`，以最小 React mock 渲染设置页、导航图标与卡片；断言三个插槽注册及其 id 规则。
-- 已在 profile 中验证：bundle 安装成功，行 `include:exa-tools` 达到 `fiberPhase: active`；settings 命名空间推导与插槽契约已对照安装源码核实。渲染效果与会话内工具调用需要浏览器/新会话，另行报告。
+- `scripts/client-test.mjs` —— 经 mock `__ModuleLoader__` 加载 `client.js`，用 mock context 跑客户端 `apply()`，以最小 React mock 渲染设置页、导航图标与卡片；断言三个插槽注册及其 id 规则。
+- 已在 profile 中验证：bundle 安装成功，行 `include:exa-tools` 达到 `fiberPhase: active`；settings 命名空间推导与插槽契约已对照安装源码核实。渲染效果需在 Web 或桌面端界面查看，会话内工具调用需新会话，均另行报告。
 
 ## 9. 可能的扩展
 

@@ -19,7 +19,7 @@ A DSH bundle is a package whose `package.json` declares `dsh.bundle.patch`; the 
 package.json        name dsh-exa-tools; dsh.bundle.patch; dsh.client (platform web)
 cordis.patch.yml    - insert: [{ id: exa-tools, name: dsh-exa-tools, config: {} }]
 index.js            Host half: export const Config, inject, apply(ctx, config)
-client.js           browser half: window.__ModuleLoader__.load({ id, factory })
+client.js           client half (Web and Desktop): window.__ModuleLoader__.load({ id, factory })
 lib/*.js            backend clients + formatting (pure modules, no cordis imports)
 locale/{en,zh}.json meta.title / meta.description for Plugin Manager
 icon.svg            original 36×36 mark, exported as ./icon
@@ -38,7 +38,7 @@ The inserted row's **id `exa-tools`** is also its settings namespace (the settin
 - **Volatile** (`.volatile()`): `apiKey`, `searchMaxResults`, `fetchMaxCharacters`, `searchTimeoutMs`, `fetchTimeoutMs`. The loader parses them into stable references; the plugin reads `config.field.get()` at call time, and a settings write commits new values **in place** — no remount, no stale closures.
 - **Ordinary**: `search`, `fetch`, `apiBaseUrl`, `mcpBaseUrl`. Edited in the profile patch; a change remounts the plugin.
 
-`apiKey` additionally carries `.role('secret')`. The settings subsystem strips secret fields from every wire response and ships a sidecar instead: `secrets: [{ path: ['apiKey'], set: true|false }]`. The browser learns *whether* a key exists, never its value.
+`apiKey` additionally carries `.role('secret')`. The settings subsystem strips secret fields from every wire response and ships a sidecar instead: `secrets: [{ path: ['apiKey'], set: true|false }]`. The client learns *whether* a key exists, never its value.
 
 ### apply lifecycle
 
@@ -132,7 +132,9 @@ Canonical outputs (identical for both backends):
 
 Rendering follows `dsh-tool-web` conventions: the standing untrusted-content notice, `- [title](url) — excerpt (date)` source lines, a cite-your-sources instruction, and a truncation footer. Snippets are whitespace-collapsed and capped at 800 characters (surrogate-safe cut). Fetch truncation is `text.length >= maxCharacters` (heuristic; an exactly-sized page may be flagged).
 
-## 5. Settings UI (browser half)
+## 5. Settings UI
+
+The page and card work identically in the Web client and the Desktop app: the client module runs in both renderers and uses the same registration and transport contracts.
 
 The primary surface is a standalone page in the **Settings panel navigation**, registered into `settings.section` (the same slot third-party pages like the recycle bin use); the identical card also embeds into the Plugins page:
 
@@ -161,7 +163,7 @@ ctx.configForms.whileServed(['exa-tools'], () =>
 - Reads: `ctx.configForms.get('exa-tools')` (values + ordered writes) and `ctx.configForms.describe()` (the shared mirror, for the secret presence marker). Both are consumed with `useSyncExternalStore`; class methods are wrapped in `useCallback` to keep `this`.
 - Writes: staged drafts, one **Save** submits `form.mutate(ops, revision)` — `set` for changed fields, `unset` for emptied numeric fields (restores the composed default; the form says so and shows each field's default). The revision fence is captured **when editing begins**, so a concurrent write elsewhere is refused instead of silently overwritten; a refusal auto-reloads the latest values, keeps the drafts, and resets the fence so an informed retry can proceed. Invalid numeric input names the field, marks it `aria-invalid`, expands the fold, and focuses it. Success messages announce via `role="status"`. **Clear API key** is `form.unset('apiKey')`.
 - The key input is write-only (`type=password`, `autocomplete=new-password`, reveal toggle for the draft). Its placeholder reflects the presence marker: “Key configured — type to replace” vs “Paste your Exa API key”.
-- Styling: self-contained controls under a `dsh-exa-` prefix, colors exclusively through `--dsw-alias-*` theme tokens (patterns copied from the official Models settings page). No Harness Client package is imported as a module; React comes from the browser module table (`require('react')`).
+- Styling: self-contained controls under a `dsh-exa-` prefix, colors exclusively through `--dsw-alias-*` theme tokens (patterns copied from the official Models settings page). No Harness Client package is imported as a module; React comes from the client module table (`require('react')`).
 - Locale dictionaries (en/zh) register through `ctx.locale`; all visible text routes through `t`.
 
 ## 6. Module resolution
@@ -176,7 +178,7 @@ A local-directory install **links** the checkout: the profile's `node_modules/ds
 ## 7. Security & privacy
 
 - Queries and fetched URLs go to Exa (`mcp.exa.ai` or `apiBaseUrl`). The system prompt and tool output label all returned content as external, untrusted data.
-- The API key travels only to `apiBaseUrl` as `x-api-key`. It is never logged, never included in error messages, and never returned to the browser (secret redaction).
+- The API key travels only to `apiBaseUrl` as `x-api-key`. It is never logged, never included in error messages, and never returned to the client (secret redaction).
 - At rest the key sits in the profile's `cordis.patch.yml` like other plugin config — plain text, guarded by OS permissions. A future version may move it to the DSH credentials service.
 - `exa_fetch` accepts any http(s) URL, including loopback/private hosts (same posture as the built-in `web_fetch`); deployments needing per-call confirmation should add a `tools/pre-execute` policy.
 
@@ -184,8 +186,8 @@ A local-directory install **links** the checkout: the profile's `node_modules/ds
 
 - `scripts/smoke.mjs` — live backend tests: free search/fetch through `lib/*`, REST 401 error path (`--rest`), real REST with `EXA_API_KEY` (`--api`).
 - `scripts/apply-test.mjs` — runs `apply()` against a mock cordis context, then executes the registered definitions: free-mode canonical values + render, argument validation, and API-mode wiring (invalid key → mapped 401).
-- `scripts/client-test.mjs` — loads `client.js` through a mock `__ModuleLoader__`, runs the browser `apply()` against a mock context, and renders the settings page, nav icon, and card with a minimal React mock; asserts the three slot registrations and their identity rules.
-- Verified in the profile: bundle installs, row `include:exa-tools` reaches `fiberPhase: active`, settings namespace derivation and slot contract checked against the installed sources. Rendered UI and in-session tool calls require a browser/new session and are reported separately.
+- `scripts/client-test.mjs` — loads `client.js` through a mock `__ModuleLoader__`, runs the client `apply()` against a mock context, and renders the settings page, nav icon, and card with a minimal React mock; asserts the three slot registrations and their identity rules.
+- Verified in the profile: bundle installs, row `include:exa-tools` reaches `fiberPhase: active`, settings namespace derivation and slot contract checked against the installed sources. Rendered UI must be checked in the Web or Desktop interface, and in-session tool calls need a new session; both are reported separately.
 
 ## 9. Possible extensions
 
