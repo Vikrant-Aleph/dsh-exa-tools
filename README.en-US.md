@@ -9,7 +9,12 @@ Exa web search and fetch tools for [DeepSeek Harness](https://github.com/deepsee
 - **`exa_search`** — semantic web search: describe the ideal page in natural language, get back source URLs with titles and relevant excerpts.
 - **`exa_fetch`** — read any webpage through Exa as clean text/markdown.
 
-**No API key? It just works.** Without a key the tools use Exa's free hosted MCP endpoint (`mcp.exa.ai`, rate-limited). With a key they call the official Exa REST API (`api.exa.ai`) with your account's limits. If the API fails (quota exhausted, rate limit, invalid key, network), calls automatically fall back to the free endpoint and the result says so; the fallback can be turned off on the settings page. Enter the key once under **Settings → Exa tools** — no config files, no restart.
+**No API key? It just works.**
+
+- Without a key, the tools use Exa's free hosted MCP endpoint (mcp.exa.ai, rate-limited);
+- With a key, they call the official Exa REST API (api.exa.ai) under your account's limits;
+- Enter the key under Settings → Exa tools — no config files, no restart, effective immediately;
+- If the API fails (quota exhausted, rate limit, invalid key, network), calls automatically fall back to the free endpoint, the result notes the reason, and the fallback can be turned off on the settings page.
 
 [中文文档](README.md) · [Technical documentation](docs/TECHNICAL.en-US.md) · [技术文档](docs/TECHNICAL.md)
 

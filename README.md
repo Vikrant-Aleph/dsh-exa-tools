@@ -9,7 +9,12 @@
 - **`exa_search`** —— 语义化网页搜索：用自然语言描述你想找的页面，返回来源 URL、标题和相关摘录。
 - **`exa_fetch`** —— 通过 Exa 抓取任意网页，返回干净的正文（text/markdown）。
 
-**没有 API Key 也能直接用。** 未填 Key 时走 Exa 免费托管 MCP 端点（`mcp.exa.ai`，有速率限制）；填了 Key 则走 Exa 官方 REST API（`api.exa.ai`），使用你账户的限额。API 失败（额度耗尽、限流、密钥失效、网络错误）时自动回退到免费端点，结果中会注明回退原因，可在设置页关闭。Key 只需在「设置 → Exa 搜索」填一次，不用改配置文件，不用重启。
+**没有 API Key 也能直接用。**
+
+- 未填 Key 时走 Exa 免费托管 MCP 端点（mcp.exa.ai，有速率限制）；
+- 填了 Key 则走 Exa 官方 REST API（api.exa.ai），使用你账户的限额；
+- Key 在「设置 → Exa 搜索」填写，不用改配置文件，不用重启立即生效；
+- API 失败（额度耗尽、限流、密钥失效、网络错误）时自动回退到免费端点，结果中会注明回退原因，可在设置页关闭。
 
 [English](README.en-US.md) · [技术文档](docs/TECHNICAL.md) · [Technical documentation](docs/TECHNICAL.en-US.md)
 
