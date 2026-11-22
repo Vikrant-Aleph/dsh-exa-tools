@@ -9,7 +9,7 @@
 - **`exa_search`** —— 语义化网页搜索：用自然语言描述你想找的页面，返回来源 URL、标题和相关摘录。
 - **`exa_fetch`** —— 通过 Exa 抓取任意网页，返回干净的正文（text/markdown）。
 
-**没有 API Key 也能直接用。** 未填 Key 时走 Exa 免费托管 MCP 端点（`mcp.exa.ai`，有速率限制）；填了 Key 则走 Exa 官方 REST API（`api.exa.ai`），使用你账户的限额。Key 只需在「设置 → Exa 搜索」填一次，不用改配置文件，不用重启。
+**没有 API Key 也能直接用。** 未填 Key 时走 Exa 免费托管 MCP 端点（`mcp.exa.ai`，有速率限制）；填了 Key 则走 Exa 官方 REST API（`api.exa.ai`），使用你账户的限额。API 失败（额度耗尽、限流、密钥失效、网络错误）时自动回退到免费端点，结果中会注明回退原因，可在设置页关闭。Key 只需在「设置 → Exa 搜索」填一次，不用改配置文件，不用重启。
 
 [English](README.en-US.md) · [技术文档](docs/TECHNICAL.md) · [Technical documentation](docs/TECHNICAL.en-US.md)
 
@@ -77,7 +77,7 @@ Key 保存在 profile 的 `cordis.patch.yml` 中（与其他插件设置同一�
 
 ## 配置项
 
-设置页（设置 → Exa 搜索）可实时修改：API Key、`searchMaxResults`、`fetchMaxCharacters`、`searchTimeoutMs`、`fetchTimeoutMs`。部署级字段在 profile 的 `cordis.patch.yml` 中编辑：
+设置页（设置 → Exa 搜索）可实时修改：API Key、`searchMaxResults`、`fetchMaxCharacters`、`searchTimeoutMs`、`fetchTimeoutMs`、回退开关 `fallbackToFree`。部署级字段在 profile 的 `cordis.patch.yml` 中编辑：
 
 ```yaml
 - id: exa-tools
@@ -96,6 +96,7 @@ Key 保存在 profile 的 `cordis.patch.yml` 中（与其他插件设置同一�
 | `fetchMaxCharacters` | `50000` | 是 | 单次抓取字符上限（1 000–500 000） |
 | `searchTimeoutMs` | `30000` | 是 | 单次搜索超时（毫秒） |
 | `fetchTimeoutMs` | `60000` | 是 | 单次抓取超时（毫秒） |
+| `fallbackToFree` | `true` | 是 | API 失败时自动回退免费端点 |
 | `search` / `fetch` | `true` | 否（YAML） | 是否注册对应工具 |
 | `apiBaseUrl` / `mcpBaseUrl` | 官方端点 | 否（YAML） | 代理或自建 MCP 时覆盖 |
 

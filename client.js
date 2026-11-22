@@ -45,6 +45,8 @@ window.__ModuleLoader__.load({
         fetchMaxCharacters: 'Max fetch characters',
         searchTimeoutMs: 'Search timeout (ms)',
         fetchTimeoutMs: 'Fetch timeout (ms)',
+        fallbackLabel: 'Fall back to the free endpoint on API failure',
+        fallbackHint: 'When the Exa API fails (quota exhausted, rate limit, invalid key, network), the call is retried on the free endpoint and the result notes the fallback.',
         default: 'default',
         save: 'Save',
         saving: 'Saving…',
@@ -80,6 +82,8 @@ window.__ModuleLoader__.load({
         fetchMaxCharacters: '抓取最大字符数',
         searchTimeoutMs: '搜索超时（毫秒）',
         fetchTimeoutMs: '抓取超时（毫秒）',
+        fallbackLabel: 'API 失败时回退到免费端点',
+        fallbackHint: 'Exa API 失败（额度耗尽、限流、密钥失效、网络错误）时自动改用免费端点重试，并在结果中注明回退原因。',
         default: '默认',
         save: '保存',
         saving: '保存中…',
@@ -124,6 +128,8 @@ window.__ModuleLoader__.load({
 .dsh-exa-dot-off { background: var(--dsw-alias-state-warn-primary, var(--dsw-alias-label-tertiary)); }
 .dsh-exa-hint { margin: 0; font-size: 12px; line-height: 18px; color: var(--dsw-alias-label-tertiary); }
 .dsh-exa-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.dsh-exa-check-row { display: flex; align-items: center; gap: 8px; font-size: 13px; line-height: 20px; color: var(--dsw-alias-label-primary); cursor: pointer; }
+.dsh-exa-check-row input { width: 16px; height: 16px; margin: 0; accent-color: var(--dsw-alias-state-business-primary); }
 .dsh-exa-label { font-size: 12px; line-height: 18px; font-weight: 500; color: var(--dsw-alias-label-secondary); }
 .dsh-exa-input { box-sizing: border-box; width: 100%; height: 32px; padding: 0 10px; border: 0.5px solid var(--dsw-alias-border-l4); border-radius: var(--dsw-radius-md); font: inherit; font-size: 14px; line-height: 22px; background: var(--dsw-alias-bg-layer-1); color: var(--dsw-alias-label-primary); }
 .dsh-exa-input:focus { outline: none; border-color: var(--dsw-alias-state-business-primary); }
@@ -206,6 +212,7 @@ window.__ModuleLoader__.load({
         if (!/^\d+$/.test(text)) { dirty = true; continue }
         if (Number(text) !== value[field.name]) dirty = true
       }
+      if (drafts.fallbackToFree !== undefined && drafts.fallbackToFree !== (value.fallbackToFree ?? true)) dirty = true
 
       const edit = (field, text) => {
         if (baseRevision === undefined) setBaseRevision(snap.revision)
@@ -235,6 +242,9 @@ window.__ModuleLoader__.load({
             continue
           }
           if (number !== value[field.name]) ops.push({ op: 'set', path: [field.name], value: number })
+        }
+        if (drafts.fallbackToFree !== undefined && drafts.fallbackToFree !== (value.fallbackToFree ?? true)) {
+          ops.push({ op: 'set', path: ['fallbackToFree'], value: drafts.fallbackToFree })
         }
         if (firstInvalid) {
           setInvalidField(firstInvalid.name)
@@ -334,6 +344,17 @@ window.__ModuleLoader__.load({
               target: '_blank',
               rel: 'noreferrer',
             }, t('keyLink')))),
+        h('div', { className: 'dsh-exa-field' },
+          h('label', { className: 'dsh-exa-check-row', htmlFor: `${idPrefix}-fallback` },
+            h('input', {
+              id: `${idPrefix}-fallback`,
+              type: 'checkbox',
+              checked: drafts.fallbackToFree ?? value.fallbackToFree ?? true,
+              disabled,
+              onChange: event => edit('fallbackToFree', event.target.checked),
+            }),
+            t('fallbackLabel')),
+          h('p', { className: 'dsh-exa-hint' }, t('fallbackHint'))),
         h('details', {
           className: 'dsh-exa-advanced',
           open: advancedOpen,

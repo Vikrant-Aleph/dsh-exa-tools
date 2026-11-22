@@ -35,7 +35,7 @@ icon.svg            原创 36×36 图标，导出为 ./icon
 
 `Config` 是 schemastery object，字段分两类：
 
-- **Volatile**（`.volatile()`）：`apiKey`、`searchMaxResults`、`fetchMaxCharacters`、`searchTimeoutMs`、`fetchTimeoutMs`。loader 把它们解析为稳定引用；插件在调用时读 `config.field.get()`，settings 写入会**就地**提交新值——不重挂载、无过期闭包。
+- **Volatile**（`.volatile()`）：`apiKey`、`searchMaxResults`、`fetchMaxCharacters`、`searchTimeoutMs`、`fetchTimeoutMs`、`fallbackToFree`。loader 把它们解析为稳定引用；插件在调用时读 `config.field.get()`，settings 写入会**就地**提交新值——不重挂载、无过期闭包。
 - **普通字段**：`search`、`fetch`、`apiBaseUrl`、`mcpBaseUrl`。在 profile patch 中编辑，修改会重挂载插件。
 
 `apiKey` 额外带 `.role('secret')`。settings 子系统从所有跨线响应中剥离 secret 字段，改发一个旁路记录：`secrets: [{ path: ['apiKey'], set: true|false }]`。客户端只知道 Key **是否存在**，永远拿不到值。
@@ -132,6 +132,10 @@ POST tools/call                → 200，SSE（或 JSON）；按 JSON-RPC id 匹
 
 渲染沿用 `dsh-tool-web` 约定：固定的不可信内容提示、`- [标题](url) — 摘录 (日期)` 来源行、引用提示、截断尾注。摘录折叠空白并截断到 800 字符（不切开代理对）。抓取截断判据为 `text.length >= maxCharacters`（启发式；恰好等长的页面可能被标记）。
 
+### 4.4 失败回退
+
+有 Key 时每次调用先走 REST；任何失败（402 额度耗尽、429 限流、401/403 密钥失效、5xx、网络错误、超时）且 `fallbackToFree` 开启（默认）时，自动改用免费 MCP 端点重试，并把简短原因（≤160 字符）写入规范输出的可选 `fallback` 字段，渲染为结果首行提示：`(Exa API unavailable: <原因> — this result comes from the free endpoint.)`。两端都失败时抛出合并错误。调用方取消（`exec.signal` aborted）不触发回退，原样重抛。每次尝试各自享有完整的超时预算（最坏总耗时约为配置的两倍）。无 Key 时本就直接走免费端点，无所谓回退。
+
 ## 5. 设置界面
 
 设置页与卡片在 Web 端和桌面端同样可用：客户端模块运行于两者的渲染层，注册与传输契约一致。
@@ -162,6 +166,7 @@ ctx.configForms.whileServed(['exa-tools'], () =>
 - 读：`ctx.configForms.get('exa-tools')`（值 + 有序写入）与 `ctx.configForms.describe()`（共享 mirror，取 secret 存在标记）。两者都用 `useSyncExternalStore` 消费；类方法用 `useCallback` 包一层以保住 `this`。
 - 写：草稿暂存，一次「保存」提交 `form.mutate(ops, revision)`——变更字段 `set`，清空的数字字段 `unset`（恢复组合默认值；表单会说明这一语义并显示各字段默认值）。revision 围栏在**开始编辑时**取快照，因此别处的并发写入会被拒绝而非静默覆盖；被拒时自动重载最新值、保留草稿并重置围栏，用户核对后可重试。数字校验错误会指明字段、标 `aria-invalid`、展开折叠并聚焦该输入框。成功消息带 `role="status"` 播报。「清除 API Key」即 `form.unset('apiKey')`。
 - Key 输入框只写（`type=password`、`autocomplete=new-password`、草稿可切换显示）。占位符反映存在标记：「已配置 —— 输入新值可替换」/「粘贴 Exa API Key」。
+- 回退开关：`fallbackToFree` 复选框，与其他字段一同暂存、一次保存。
 - 样式：`dsh-exa-` 前缀的自包含控件，颜色全部走 `--dsw-alias-*` 主题令牌（样式范式抄自官方 Models 设置页）。不把任何 Harness Client 包当模块 import；React 来自客户端模块表（`require('react')`）。
 - 字典（en/zh）经 `ctx.locale` 注册；所有可见文本走 `t`。
 

@@ -35,7 +35,7 @@ The inserted row's **id `exa-tools`** is also its settings namespace (the settin
 
 `Config` is a schemastery object. Two field classes:
 
-- **Volatile** (`.volatile()`): `apiKey`, `searchMaxResults`, `fetchMaxCharacters`, `searchTimeoutMs`, `fetchTimeoutMs`. The loader parses them into stable references; the plugin reads `config.field.get()` at call time, and a settings write commits new values **in place** — no remount, no stale closures.
+- **Volatile** (`.volatile()`): `apiKey`, `searchMaxResults`, `fetchMaxCharacters`, `searchTimeoutMs`, `fetchTimeoutMs`, `fallbackToFree`. The loader parses them into stable references; the plugin reads `config.field.get()` at call time, and a settings write commits new values **in place** — no remount, no stale closures.
 - **Ordinary**: `search`, `fetch`, `apiBaseUrl`, `mcpBaseUrl`. Edited in the profile patch; a change remounts the plugin.
 
 `apiKey` additionally carries `.role('secret')`. The settings subsystem strips secret fields from every wire response and ships a sidecar instead: `secrets: [{ path: ['apiKey'], set: true|false }]`. The client learns *whether* a key exists, never its value.
@@ -132,6 +132,10 @@ Canonical outputs (identical for both backends):
 
 Rendering follows `dsh-tool-web` conventions: the standing untrusted-content notice, `- [title](url) — excerpt (date)` source lines, a cite-your-sources instruction, and a truncation footer. Snippets are whitespace-collapsed and capped at 800 characters (surrogate-safe cut). Fetch truncation is `text.length >= maxCharacters` (heuristic; an exactly-sized page may be flagged).
 
+### 4.4 Failure fallback
+
+With a key, each call tries REST first; on any failure (402 quota, 429 rate limit, 401/403 invalid key, 5xx, network, timeout) with `fallbackToFree` on (the default), it retries on the free MCP endpoint and writes a short reason (≤160 chars) into the optional `fallback` field of the canonical output, rendered as the result's first line: `(Exa API unavailable: <reason> — this result comes from the free endpoint.)`. If both backends fail, a combined error is thrown. Caller cancellation (`exec.signal` aborted) never falls back and rethrows untouched. Each attempt gets its own full timeout budget (worst-case total ≈ twice the configured budget). Without a key the free endpoint is the primary path, so there is nothing to fall back from.
+
 ## 5. Settings UI
 
 The page and card work identically in the Web client and the Desktop app: the client module runs in both renderers and uses the same registration and transport contracts.
@@ -163,6 +167,7 @@ ctx.configForms.whileServed(['exa-tools'], () =>
 - Reads: `ctx.configForms.get('exa-tools')` (values + ordered writes) and `ctx.configForms.describe()` (the shared mirror, for the secret presence marker). Both are consumed with `useSyncExternalStore`; class methods are wrapped in `useCallback` to keep `this`.
 - Writes: staged drafts, one **Save** submits `form.mutate(ops, revision)` — `set` for changed fields, `unset` for emptied numeric fields (restores the composed default; the form says so and shows each field's default). The revision fence is captured **when editing begins**, so a concurrent write elsewhere is refused instead of silently overwritten; a refusal auto-reloads the latest values, keeps the drafts, and resets the fence so an informed retry can proceed. Invalid numeric input names the field, marks it `aria-invalid`, expands the fold, and focuses it. Success messages announce via `role="status"`. **Clear API key** is `form.unset('apiKey')`.
 - The key input is write-only (`type=password`, `autocomplete=new-password`, reveal toggle for the draft). Its placeholder reflects the presence marker: “Key configured — type to replace” vs “Paste your Exa API key”.
+- Fallback switch: a `fallbackToFree` checkbox, staged and saved with the other fields.
 - Styling: self-contained controls under a `dsh-exa-` prefix, colors exclusively through `--dsw-alias-*` theme tokens (patterns copied from the official Models settings page). No Harness Client package is imported as a module; React comes from the client module table (`require('react')`).
 - Locale dictionaries (en/zh) register through `ctx.locale`; all visible text routes through `t`.
 

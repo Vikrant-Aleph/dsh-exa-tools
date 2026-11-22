@@ -51,6 +51,8 @@ export const Config = z.object({
     .description('Cooperative timeout budget (ms) for one exa_search call.'),
   fetchTimeoutMs: z.number().default(60_000).min(1_000).max(300_000).step(1_000).volatile()
     .description('Cooperative timeout budget (ms) for one exa_fetch call.'),
+  fallbackToFree: z.boolean().default(true).volatile()
+    .description('When the Exa API fails (quota exhausted, rate limit, invalid key, network), retry the call on the free endpoint and note the fallback in the result.'),
   search: z.boolean().default(true)
     .description('Register the exa_search tool.'),
   fetch: z.boolean().default(true)
@@ -107,6 +109,32 @@ export function apply(ctx, config) {
   ctx.effect(() => () => { void mcp.dispose() })
 
   const keyOf = () => (config.apiKey.get() ?? '').trim()
+
+  /**
+   * Backend selection with automatic fallback. With a key, try REST first;
+   * on any failure (quota, rate limit, invalid key, network, timeout) retry
+   * on the free MCP endpoint when fallbackToFree is on, carrying a short
+   * reason into the result. Caller cancellation is never fallen back from.
+   * Each attempt gets the full timeout budget of its own.
+   */
+  const runBackend = async (exec, restFn, mcpFn) => {
+    const apiKey = keyOf()
+    if (!apiKey) return { value: await mcpFn(), fallback: undefined }
+    try {
+      return { value: await restFn(apiKey), fallback: undefined }
+    } catch (error) {
+      if (exec.signal?.aborted) throw error
+      if (!(config.fallbackToFree.get() ?? true)) throw error
+      const reason = String(error instanceof Error ? error.message : error).replace(/\s+/gu, ' ').slice(0, 160)
+      try {
+        return { value: await mcpFn(), fallback: reason }
+      } catch (freeError) {
+        if (exec.signal?.aborted) throw freeError
+        const freeMessage = String(freeError instanceof Error ? freeError.message : freeError)
+        throw new Error(`Exa API failed (${reason}); free endpoint also failed: ${freeMessage}`)
+      }
+    }
+  }
 
   // This plugin ships its own configuration page (the Plugins-page card), so
   // tell the settings service not to auto-generate one for this instance.
@@ -178,6 +206,7 @@ export function apply(ctx, config) {
               },
             },
             text: { type: 'string' },
+            fallback: { type: 'string' },
           },
           required: ['sources'],
           additionalProperties: false,
@@ -191,29 +220,27 @@ export function apply(ctx, config) {
         const query = typeof args.query === 'string' ? args.query.trim() : ''
         if (!query) throw new Error('query must be a non-empty string')
         checkOptionalCount(args, 'num_results')
-        const apiKey = keyOf()
         const numResults = clampInt(args.num_results, DEFAULT_NUM_RESULTS, 1, config.searchMaxResults.get() ?? 10)
         const timeoutMs = config.searchTimeoutMs.get() ?? 30_000
         try {
-          if (apiKey) {
-            const sources = await restSearch({
+          const { value, fallback } = await runBackend(exec,
+            apiKey => restSearch({
               baseUrl: config.apiBaseUrl, apiKey, query, numResults, timeoutMs, signal: exec.signal,
-            })
-            return {
+            }).then(sources => ({
               sources: sources.map(({ snippet, ...rest }) => {
                 const capped = collapseSnippet(snippet)
                 return capped ? { ...rest, snippet: capped } : rest
               }),
-            }
-          }
-          const content = await mcp.callTool(
-            'web_search_exa',
-            { query, numResults, objective: query },
-            { signal: exec.signal, timeoutMs },
+            })),
+            () => mcp.callTool(
+              'web_search_exa',
+              { query, numResults, objective: query },
+              { signal: exec.signal, timeoutMs },
+            ).then(parseMcpSearch),
           )
-          return parseMcpSearch(content)
+          return { ...value, ...fallback ? { fallback } : {} }
         } catch (error) {
-          throw toolError(error, exec, !apiKey)
+          throw toolError(error, exec, !keyOf())
         }
       },
     })
@@ -247,6 +274,7 @@ export function apply(ctx, config) {
             title: { type: 'string' },
             text: { type: 'string' },
             truncated: { type: 'boolean' },
+            fallback: { type: 'string' },
           },
           required: ['url', 'text', 'truncated'],
           additionalProperties: false,
@@ -264,31 +292,28 @@ export function apply(ctx, config) {
         if (target.protocol !== 'http:' && target.protocol !== 'https:') {
           throw new Error('url must use http or https')
         }
-        const apiKey = keyOf()
         const maxCharacters = clampInt(args.max_characters, DEFAULT_MAX_CHARACTERS, 1, config.fetchMaxCharacters.get() ?? 50_000)
         const timeoutMs = config.fetchTimeoutMs.get() ?? 60_000
         try {
-          let result
-          if (apiKey) {
-            result = await restFetch({
+          const { value: result, fallback } = await runBackend(exec,
+            apiKey => restFetch({
               baseUrl: config.apiBaseUrl, apiKey, url: target.href, maxCharacters, timeoutMs, signal: exec.signal,
-            })
-          } else {
-            const content = await mcp.callTool(
+            }),
+            () => mcp.callTool(
               'web_fetch_exa',
               { urls: [target.href], maxCharacters },
               { signal: exec.signal, timeoutMs },
-            )
-            result = parseMcpFetch(content, target.href)
-          }
+            ).then(content => parseMcpFetch(content, target.href)),
+          )
           return {
             url: result.url,
             ...result.title ? { title: result.title } : {},
             text: safeSlice(result.text, maxCharacters),
             truncated: result.text.length >= maxCharacters,
+            ...fallback ? { fallback } : {},
           }
         } catch (error) {
-          throw toolError(error, exec, !apiKey)
+          throw toolError(error, exec, !keyOf())
         }
       },
     })

@@ -9,7 +9,7 @@ Exa web search and fetch tools for [DeepSeek Harness](https://github.com/deepsee
 - **`exa_search`** — semantic web search: describe the ideal page in natural language, get back source URLs with titles and relevant excerpts.
 - **`exa_fetch`** — read any webpage through Exa as clean text/markdown.
 
-**No API key? It just works.** Without a key the tools use Exa's free hosted MCP endpoint (`mcp.exa.ai`, rate-limited). With a key they call the official Exa REST API (`api.exa.ai`) with your account's limits. Enter the key once under **Settings → Exa tools** — no config files, no restart.
+**No API key? It just works.** Without a key the tools use Exa's free hosted MCP endpoint (`mcp.exa.ai`, rate-limited). With a key they call the official Exa REST API (`api.exa.ai`) with your account's limits. If the API fails (quota exhausted, rate limit, invalid key, network), calls automatically fall back to the free endpoint and the result says so; the fallback can be turned off on the settings page. Enter the key once under **Settings → Exa tools** — no config files, no restart.
 
 [中文文档](README.md) · [Technical documentation](docs/TECHNICAL.en-US.md) · [技术文档](docs/TECHNICAL.md)
 
@@ -77,7 +77,7 @@ Both tools coexist with DSH's built-in `web_search` / `web_fetch`; the system pr
 
 ## Configuration
 
-The settings page (Settings → Exa tools) edits the live fields: API key, `searchMaxResults`, `fetchMaxCharacters`, `searchTimeoutMs`, `fetchTimeoutMs`. Deployment-level fields are edited in the profile's `cordis.patch.yml`:
+The settings page (Settings → Exa tools) edits the live fields: API key, `searchMaxResults`, `fetchMaxCharacters`, `searchTimeoutMs`, `fetchTimeoutMs`, and the `fallbackToFree` switch. Deployment-level fields are edited in the profile's `cordis.patch.yml`:
 
 ```yaml
 - id: exa-tools
@@ -96,6 +96,7 @@ The settings page (Settings → Exa tools) edits the live fields: API key, `sear
 | `fetchMaxCharacters` | `50000` | yes | Cap on page characters per fetch (1 000–500 000) |
 | `searchTimeoutMs` | `30000` | yes | Per-call search budget (ms) |
 | `fetchTimeoutMs` | `60000` | yes | Per-call fetch budget (ms) |
+| `fallbackToFree` | `true` | yes | Fall back to the free endpoint when the API fails |
 | `search` / `fetch` | `true` | no (YAML) | Register each tool |
 | `apiBaseUrl` / `mcpBaseUrl` | official endpoints | no (YAML) | Override for proxies or self-hosted MCP |
 

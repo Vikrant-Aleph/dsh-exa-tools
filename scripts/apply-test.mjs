@@ -56,19 +56,32 @@ for (const [tool, args, expect] of [
   }
 }
 
-// API-key mode wiring: an invalid key must reach the REST branch and map 401.
+// API-key mode with fallback disabled: an invalid key must surface the mapped 401.
 const keyed = []
 const keyedCtx = makeCtx()
-const origRegister = keyedCtx.tools.register
 keyedCtx.tools.register = def => { keyed.push(def); return () => {} }
-apply(keyedCtx, new Config({ apiKey: 'invalid-key-for-test' }))
+apply(keyedCtx, new Config({ apiKey: 'invalid-key-for-test', fallbackToFree: false }))
 try {
   await keyed.find(d => d.name === 'exa_search').execute({ query: 'test' }, exec)
   throw new Error('invalid key unexpectedly succeeded')
 } catch (error) {
   if (!/HTTP 401/.test(error.message)) throw error
-  console.log('\nAPI-mode wiring ok:', error.message.slice(0, 100))
+  console.log('\nAPI-mode (no fallback) ok:', error.message.slice(0, 100))
 }
+
+// Fallback: invalid key + default fallbackToFree → the free endpoint answers
+// and the result carries the fallback reason, in the value and the render.
+const fb = []
+const fbCtx = makeCtx()
+fbCtx.tools.register = def => { fb.push(def); return () => {} }
+apply(fbCtx, new Config({ apiKey: 'invalid-key-for-test' }))
+const fbSearch = fb.find(d => d.name === 'exa_search')
+const fbValue = await fbSearch.execute({ query: 'Exa AI search API documentation', num_results: 2 }, exec)
+if (!fbValue.fallback || !/HTTP 401/.test(fbValue.fallback)) throw new Error('fallback reason missing')
+if (!Array.isArray(fbValue.sources) || fbValue.sources.length === 0) throw new Error('fallback produced no sources')
+const fbText = fbSearch.output.render({}, fbValue)[0].text
+if (!fbText.includes('free endpoint')) throw new Error('render missing fallback notice')
+console.log('fallback ok:', fbValue.fallback.slice(0, 80))
 
 for (const cleanup of cleanups) await cleanup()
 console.log('\nAPPLY TEST OK')

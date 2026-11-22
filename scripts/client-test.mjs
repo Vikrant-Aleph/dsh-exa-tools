@@ -40,8 +40,8 @@ const form = {
   subscribe: () => () => {},
   getSnapshot: () => ({
     status: 'ready',
-    value: { searchMaxResults: 10, fetchMaxCharacters: 50000, searchTimeoutMs: 30000, fetchTimeoutMs: 60000 },
-    base: { searchMaxResults: 10, fetchMaxCharacters: 50000, searchTimeoutMs: 30000, fetchTimeoutMs: 60000 },
+    value: { searchMaxResults: 10, fetchMaxCharacters: 50000, searchTimeoutMs: 30000, fetchTimeoutMs: 60000, fallbackToFree: true },
+    base: { searchMaxResults: 10, fetchMaxCharacters: 50000, searchTimeoutMs: 30000, fetchTimeoutMs: 60000, fallbackToFree: true },
     revision: 3,
     writable: true,
   }),
