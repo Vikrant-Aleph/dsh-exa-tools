@@ -16,14 +16,14 @@
 
 ## 安装
 
-**方式一：下载 Release 安装（推荐）**
+**方式一：npm 安装（推荐）**
+
+「插件」→「添加插件」，直接填包名 `dsh-exa-tools`。
+
+**方式二：下载 Release 安装**
 
 1. 到 [Releases](https://github.com/Vikrant-Aleph/dsh-exa-tools/releases) 下载最新版的 `dsh-exa-tools-<版本>.tgz`
 2. DSH 侧边栏「插件」→「添加插件」，选择该 tgz 文件（或直接粘贴 Release 附件的 URL）
-
-**方式二：npm 安装**
-
-「插件」→「添加插件」，直接填包名 `dsh-exa-tools`。
 
 **方式三：Git 地址 / 本地目录（开发者）**
 

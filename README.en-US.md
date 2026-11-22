@@ -16,14 +16,14 @@ Exa web search and fetch tools for [DeepSeek Harness](https://github.com/deepsee
 
 ## Install
 
-**Option 1: download a Release (recommended)**
+**Option 1: npm (recommended)**
+
+**Plugins** → **Add plugin** → enter the package name `dsh-exa-tools`.
+
+**Option 2: download a Release**
 
 1. Grab the latest `dsh-exa-tools-<version>.tgz` from [Releases](https://github.com/Vikrant-Aleph/dsh-exa-tools/releases)
 2. DSH sidebar **Plugins** → **Add plugin** → pick the tgz file (or paste the Release asset URL)
-
-**Option 2: npm**
-
-**Plugins** → **Add plugin** → enter the package name `dsh-exa-tools`.
 
 **Option 3: Git URL / local directory (developers)**
 
