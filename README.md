@@ -1,129 +1,129 @@
 # dsh-exa-tools
 
-Exa web search and fetch tools for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (DSH). Adds two tools to every agent in the profile:
+给 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）接入 Exa 搜索的插件，为 profile 中的每个 agent 增加两个工具：
 
-- **`exa_search`** — semantic web search: describe the ideal page in natural language, get back source URLs with titles and relevant excerpts.
-- **`exa_fetch`** — read any webpage through Exa as clean text/markdown.
+- **`exa_search`** —— 语义化网页搜索：用自然语言描述你想找的页面，返回来源 URL、标题和相关摘录。
+- **`exa_fetch`** —— 通过 Exa 抓取任意网页，返回干净的正文（text/markdown）。
 
-**No API key? It just works.** Without a key the tools use Exa's free hosted MCP endpoint (`mcp.exa.ai`, rate-limited). With a key they call the official Exa REST API (`api.exa.ai`) with your account's limits. Enter the key once under **Settings → Exa tools** — no config files, no restart.
+**没有 API Key 也能直接用。** 未填 Key 时走 Exa 免费托管 MCP 端点（`mcp.exa.ai`，有速率限制）；填了 Key 则走 Exa 官方 REST API（`api.exa.ai`），使用你账户的限额。Key 只需在「设置 → Exa 搜索」填一次，不用改配置文件，不用重启。
 
-[中文文档](README.zh-CN.md) · [Technical documentation](docs/TECHNICAL.md) · [技术文档（中文）](docs/TECHNICAL.zh-CN.md)
+[English](README.en-US.md) · [技术文档](docs/TECHNICAL.md) · [Technical documentation](docs/TECHNICAL.en-US.md)
 
-## Requirements
+## 环境要求
 
-- DeepSeek Harness `>=0.2.2-rc.1 <0.3.0` (Desktop or Web profile)
-- Node.js `>=24.9` (the runtime DSH already ships)
+- DeepSeek Harness `>=0.2.2-rc.1 <0.3.0`（Desktop 或 Web profile）
+- Node.js `>=24.9`（DSH 自带运行时即满足）
 
-## Install
+## 安装
 
-**From the DSH UI:** sidebar **Plugins** → **Add plugin** → point it at this project:
+**通过 DSH 界面：** 侧边栏「插件」→「添加插件」，指向本项目：
 
-- a local directory: `D:\path\to\dsh-exa-tools` (or `/path/to/dsh-exa-tools`)
-- a Git URL: `https://github.com/Vikrant-Aleph/dsh-exa-tools.git`
-- the package name `dsh-exa-tools` once published to npm
+- 本地目录：`D:\path\to\dsh-exa-tools`（或 `/path/to/dsh-exa-tools`）
+- Git 地址：`https://github.com/Vikrant-Aleph/dsh-exa-tools.git`
+- 发布到 npm 后也可直接填包名 `dsh-exa-tools`
 
-**From a conversation:** ask the agent to install the bundle, e.g. “install the plugin at `D:\path\to\dsh-exa-tools`”.
+**通过对话：** 直接让 agent 安装，例如「安装 `D:\path\to\dsh-exa-tools` 这个插件」。
 
-> **Local directory installs:** DSH links the checkout instead of copying it. Run `pnpm install` (or `npm install`) in the project directory once before installing, so the plugin's `@deepseek-ai/schemastery` dependency resolves. The project uses a hoisted `node_modules` layout on purpose — see [Technical documentation](docs/TECHNICAL.md#module-resolution).
+> **本地目录安装注意：** DSH 以链接（link）方式引用你的 checkout，而不是复制。安装前请先在项目目录里执行一次 `pnpm install`（或 `npm install`），让插件依赖的 `@deepseek-ai/schemastery` 可解析。项目刻意使用 hoisted 的 `node_modules` 布局，原因见[技术文档](docs/TECHNICAL.md#模块解析)。
 
-After installation the plugin is enabled immediately (HMR). Open a **new session** and the two tools are available to the agent.
+安装后插件立即启用（HMR）。**新开一个会话**，agent 就能调用这两个工具。
 
-## Set up the API key (optional)
+## 填写 API Key（可选）
 
-1. Sidebar **Settings** → **Exa tools** (the plugin's page under **Plugins** carries the same form).
-2. Paste your key into **API key** and press **Save**. Get a key at [dashboard.exa.ai/api-keys](https://dashboard.exa.ai/api-keys).
-3. The status line flips from *Free mode* to *API mode*. Changes apply to the next tool call — no restart.
+1. 侧边栏「设置」→「Exa 搜索」（「插件」页的本插件详情里也有同样的表单）。
+2. 在 **API Key** 输入框粘贴密钥，点「保存」。密钥在 [dashboard.exa.ai/api-keys](https://dashboard.exa.ai/api-keys) 获取。
+3. 状态行从「免费模式」变为「API 模式」。下一次工具调用即生效，无需重启。
 
-**Clear API key** on the same page switches back to the free endpoint.
+同一页面上的「清除 API Key」可切回免费端点。
 
-Without a key everything works out of the box on Exa's free tier; the free endpoint is rate-limited, and a rate-limit error tells the model (and you) to add a key.
+不填 Key 时开箱即用（Exa 免费额度）；免费端点有速率限制，触发限流时错误信息会提示填写 Key。
 
-### Where the key lives
+### Key 存在哪里
 
-The key is stored in your profile's `cordis.patch.yml` (the same place as other plugin settings). It is a *write-only secret* in the UI: DSH never sends the stored value back to the browser — the input only shows whether a key is configured. Treat the profile directory like any other credential store: it is plain text on disk, protected by your OS user permissions.
+Key 保存在 profile 的 `cordis.patch.yml` 中（与其他插件设置同一位置）。它在界面上是**只写密钥**：DSH 从不把已保存的值回传给浏览器，输入框只显示「是否已配置」。请像对待其他凭据文件一样对待 profile 目录：磁盘上是明文，安全性取决于你的系统用户权限。
 
-## Tools
+## 工具说明
 
 ### `exa_search`
 
-| Parameter | Type | Description |
+| 参数 | 类型 | 说明 |
 |---|---|---|
-| `query` | string, required | Natural-language description of the page you want to find, e.g. `"blog post comparing React and Vue performance"` — not keyword strings. |
-| `num_results` | integer, optional | Results to return (default 5, capped by `searchMaxResults`, default 10). |
+| `query` | string，必填 | 用自然语言描述想找的页面，例如「对比 React 和 Vue 性能的博客文章」，不要只写关键词。 |
+| `num_results` | integer，可选 | 返回条数（默认 5，上限由 `searchMaxResults` 控制，默认 10）。 |
 
-Returns a source list: `- [title](url) — excerpt (publishedDate)`, each excerpt capped at 800 characters, with the standing notice that results are external, untrusted data and should be cited as markdown links.
+返回来源列表：`- [标题](url) — 摘录 (发布日期)`，每条摘录最多 800 字符，并附带固定提示：结果为外部不可信数据，引用时请用 markdown 链接。
 
 ### `exa_fetch`
 
-| Parameter | Type | Description |
+| 参数 | 类型 | 说明 |
 |---|---|---|
-| `url` | string, required | Absolute `http(s)` URL of the page to read. |
-| `max_characters` | integer, optional | Page characters to return (default 20 000, capped by `fetchMaxCharacters`, default 50 000). |
+| `url` | string，必填 | 要读取的页面绝对 `http(s)` URL。 |
+| `max_characters` | integer，可选 | 返回的正文字符数（默认 20 000，上限由 `fetchMaxCharacters` 控制，默认 50 000）。 |
 
-Returns `Fetched <url>` plus the page body as clean text/markdown. Truncated content is marked so the model can fetch a more specific section.
+返回 `Fetched <url>` 加干净正文。内容被截断时会标注，模型可据此抓取更具体的章节。
 
-Both tools coexist with DSH's built-in `web_search` / `web_fetch`; the system prompt tells the model what each returns and to treat the content as untrusted data.
+两个工具与 DSH 内置的 `web_search` / `web_fetch` 并存；系统提示词会告诉模型各自的用途，并把返回内容视为不可信数据。
 
-## Configuration
+## 配置项
 
-The settings page (Settings → Exa tools) edits the live fields: API key, `searchMaxResults`, `fetchMaxCharacters`, `searchTimeoutMs`, `fetchTimeoutMs`. Deployment-level fields are edited in the profile's `cordis.patch.yml`:
+设置页（设置 → Exa 搜索）可实时修改：API Key、`searchMaxResults`、`fetchMaxCharacters`、`searchTimeoutMs`、`fetchTimeoutMs`。部署级字段在 profile 的 `cordis.patch.yml` 中编辑：
 
 ```yaml
 - id: exa-tools
   name: dsh-exa-tools
   config:
-    search: true            # register exa_search
-    fetch: true             # register exa_fetch
+    search: true            # 注册 exa_search
+    fetch: true             # 注册 exa_fetch
     apiBaseUrl: https://api.exa.ai
     mcpBaseUrl: https://mcp.exa.ai/mcp
 ```
 
-| Field | Default | Editable on plugin page | Meaning |
+| 字段 | 默认值 | 插件页可改 | 含义 |
 |---|---|---|---|
-| `apiKey` | *(empty)* | yes (write-only) | Exa API key; empty = free MCP endpoint |
-| `searchMaxResults` | `10` | yes | Cap on sources per search (1–50) |
-| `fetchMaxCharacters` | `50000` | yes | Cap on page characters per fetch (1 000–500 000) |
-| `searchTimeoutMs` | `30000` | yes | Per-call search budget (ms) |
-| `fetchTimeoutMs` | `60000` | yes | Per-call fetch budget (ms) |
-| `search` / `fetch` | `true` | no (YAML) | Register each tool |
-| `apiBaseUrl` / `mcpBaseUrl` | official endpoints | no (YAML) | Override for proxies or self-hosted MCP |
+| `apiKey` | *（空）* | 是（只写） | Exa API Key；空 = 免费 MCP 端点 |
+| `searchMaxResults` | `10` | 是 | 单次搜索来源上限（1–50） |
+| `fetchMaxCharacters` | `50000` | 是 | 单次抓取字符上限（1 000–500 000） |
+| `searchTimeoutMs` | `30000` | 是 | 单次搜索超时（毫秒） |
+| `fetchTimeoutMs` | `60000` | 是 | 单次抓取超时（毫秒） |
+| `search` / `fetch` | `true` | 否（YAML） | 是否注册对应工具 |
+| `apiBaseUrl` / `mcpBaseUrl` | 官方端点 | 否（YAML） | 代理或自建 MCP 时覆盖 |
 
-## Development
+## 开发
 
-Plain ESM JavaScript — no build step.
+纯 ESM JavaScript，无构建步骤。
 
 ```
-index.js            Host plugin: Config schema + tool registration
-lib/http.js         fetch with fused timeout/cancellation; REST error mapping
-lib/exa-mcp.js      minimal MCP streamable-HTTP client (free endpoint)
-lib/exa-rest.js     Exa REST client (/search, /contents)
-lib/format.js       MCP text parsing, canonical outputs, model-facing rendering
-client.js           browser half: configuration card on the Plugins page
-cordis.patch.yml    bundle patch inserting the exa-tools row
-locale/             plugin display metadata (en, zh)
-scripts/smoke.mjs   backend smoke test against the live endpoints
-scripts/apply-test.mjs  integration test: apply() + execute() via a mock context
-scripts/client-test.mjs client test: slot registrations + settings page render
+index.js            Host 插件：Config schema + 工具注册
+lib/http.js         融合超时/取消的 fetch；REST 错误映射
+lib/exa-mcp.js      极简 MCP streamable-HTTP 客户端（免费端点）
+lib/exa-rest.js     Exa REST 客户端（/search、/contents）
+lib/format.js       MCP 文本解析、规范化输出、面向模型的渲染
+client.js           浏览器端：Plugins 页配置卡片
+cordis.patch.yml    插入 exa-tools 行的 bundle patch
+locale/             插件显示元数据（en、zh）
+scripts/smoke.mjs   后端冒烟测试（真实端点）
+scripts/apply-test.mjs  集成测试：mock context 下 apply() + execute()
+scripts/client-test.mjs 客户端测试：插槽注册 + 设置页渲染
 ```
 
 ```sh
-pnpm install          # once; hoisted layout (see pnpm-workspace.yaml)
-pnpm smoke            # free endpoint search + fetch, REST 401 error path
-pnpm smoke:api        # real REST calls; needs EXA_API_KEY in the environment
-pnpm test:apply       # registration, validation, both backends, rendering
-pnpm test:client      # settings page / nav icon / card registrations
+pnpm install          # 首次；hoisted 布局（见 pnpm-workspace.yaml）
+pnpm smoke            # 免费端点搜索 + 抓取，REST 401 错误路径
+pnpm smoke:api        # 真实 REST 调用；需要环境里有 EXA_API_KEY
+pnpm test:apply       # 注册、参数校验、双后端、渲染
+pnpm test:client      # 设置页 / 导航图标 / 卡片注册
 ```
 
-See [docs/TECHNICAL.md](docs/TECHNICAL.md) for the architecture: bundle layout, the native tool-definition contract, the MCP handshake, secret redaction, and the settings transport.
+架构细节（bundle 结构、原生工具定义契约、MCP 握手、密钥脱敏、settings 传输）见[技术文档](docs/TECHNICAL.md)。
 
-## Limitations
+## 已知限制
 
-- The free endpoint is rate-limited and shared; heavy use needs an API key.
-- Search excerpts are capped (800 chars/source); use `exa_fetch` for full pages.
-- Fetch truncation is detected by length reaching the requested budget, so an exactly-sized page may be marked truncated.
-- The API key is stored in the profile patch (plain text on disk); DSH's credentials service is not used in this version.
-- No `EXA_API_KEY` environment fallback yet — the key comes from the plugin page or the profile patch.
+- 免费端点有速率限制且为共享额度，重度使用需要 API Key。
+- 搜索摘录有上限（每条 800 字符）；需要全文请用 `exa_fetch`。
+- 抓取截断按「长度达到请求预算」判断，恰好等长的页面可能被标记为截断。
+- API Key 存于 profile patch（磁盘明文）；本版本未使用 DSH 的 credentials 服务。
+- 暂不支持 `EXA_API_KEY` 环境变量回退——Key 来自插件页面或 profile patch。
 
-## License
+## 许可证
 
 [MIT](LICENSE)

@@ -23,7 +23,7 @@
     "pnpm-workspace.yaml",
     "pnpm-lock.yaml",
     "README.md",
-    "README.zh-CN.md",
+    "README.en-US.md",
     "LICENSE"
   ],
   "dsh": {

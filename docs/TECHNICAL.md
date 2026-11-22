@@ -1,127 +1,127 @@
-# Technical documentation
+# 技术文档
 
-Architecture of `dsh-exa-tools`, a DeepSeek Harness (DSH) bundle. Written against DSH `0.2.2-rc.5`; the contracts used here are the stable ones shared with the MCP bridge and the settings subsystem.
+`dsh-exa-tools` 的架构说明。这是一个 DeepSeek Harness（DSH）bundle，基于 DSH `0.2.2-rc.5` 编写；所用契约均为与 MCP 桥、settings 子系统共享的稳定契约。
 
-中文版本：[TECHNICAL.zh-CN.md](TECHNICAL.zh-CN.md)
+English version: [TECHNICAL.en-US.md](TECHNICAL.en-US.md)
 
-## 1. Design goals
+## 1. 设计目标
 
-1. **Zero-config start.** With no API key, both tools work against Exa's free hosted MCP endpoint. No account, no env var, no YAML edit.
-2. **One model-facing contract.** Free (MCP) and paid (REST) backends normalize to the same canonical output per tool, so the model never sees which mode is active.
-3. **Settings UI for the key.** The key is entered on the plugin's page under Plugins, stored as a write-only secret, and applies live without a restart.
-4. **Small dependency surface.** Plain ESM JavaScript, no build step, one npm dependency (`@deepseek-ai/schemastery`).
+1. **零配置可用。** 没有 API Key 时，两个工具直接走 Exa 免费托管 MCP 端点。不需要账号、环境变量或改 YAML。
+2. **统一的模型侧契约。** 免费（MCP）与付费（REST）两条后端归一化为同一份规范输出，模型感知不到当前模式。
+3. **设置界面填 Key。** Key 在「插件」页填写，以只写密钥保存，实时生效，无需重启。
+4. **最小依赖面。** 纯 ESM JavaScript，无构建步骤，只有一个 npm 依赖（`@deepseek-ai/schemastery`）。
 
-## 2. Bundle layout
+## 2. Bundle 结构
 
-A DSH bundle is a package whose `package.json` declares `dsh.bundle.patch`; the YAML patch inserts plugin rows into the profile's composed tree.
+DSH bundle 是一个在 `package.json` 里声明 `dsh.bundle.patch` 的包；YAML patch 向 profile 的组合树插入插件行。
 
 ```
-package.json        name dsh-exa-tools; dsh.bundle.patch; dsh.client (platform web)
+package.json        包名 dsh-exa-tools；dsh.bundle.patch；dsh.client（platform web）
 cordis.patch.yml    - insert: [{ id: exa-tools, name: dsh-exa-tools, config: {} }]
-index.js            Host half: export const Config, inject, apply(ctx, config)
-client.js           browser half: window.__ModuleLoader__.load({ id, factory })
-lib/*.js            backend clients + formatting (pure modules, no cordis imports)
-locale/{en,zh}.json meta.title / meta.description for Plugin Manager
-icon.svg            original 36×36 mark, exported as ./icon
+index.js            Host 端：export const Config、inject、apply(ctx, config)
+client.js           浏览器端：window.__ModuleLoader__.load({ id, factory })
+lib/*.js            后端客户端 + 格式化（纯模块，不 import cordis）
+locale/{en,zh}.json 插件管理器显示的 meta.title / meta.description
+icon.svg            原创 36×36 图标，导出为 ./icon
 ```
 
-The inserted row's **id `exa-tools`** is also its settings namespace (the settings service keys forms by `entry.options.id`, not the composed tree path `include:exa-tools`).
+插入行的 **id `exa-tools`** 同时是它的 settings 命名空间（settings 服务以 `entry.options.id` 为表单键，而不是组合树路径 `include:exa-tools`）。
 
-`engines.dsh: ">=0.2.2-rc.1 <0.3.0-0"` gates installation against the running DSH.
+`engines.dsh: ">=0.2.2-rc.1 <0.3.0-0"` 在安装时校验运行中的 DSH 版本。
 
-## 3. Host plugin
+## 3. Host 插件
 
 ### Config schema
 
-`Config` is a schemastery object. Two field classes:
+`Config` 是 schemastery object，字段分两类：
 
-- **Volatile** (`.volatile()`): `apiKey`, `searchMaxResults`, `fetchMaxCharacters`, `searchTimeoutMs`, `fetchTimeoutMs`. The loader parses them into stable references; the plugin reads `config.field.get()` at call time, and a settings write commits new values **in place** — no remount, no stale closures.
-- **Ordinary**: `search`, `fetch`, `apiBaseUrl`, `mcpBaseUrl`. Edited in the profile patch; a change remounts the plugin.
+- **Volatile**（`.volatile()`）：`apiKey`、`searchMaxResults`、`fetchMaxCharacters`、`searchTimeoutMs`、`fetchTimeoutMs`。loader 把它们解析为稳定引用；插件在调用时读 `config.field.get()`，settings 写入会**就地**提交新值——不重挂载、无过期闭包。
+- **普通字段**：`search`、`fetch`、`apiBaseUrl`、`mcpBaseUrl`。在 profile patch 中编辑，修改会重挂载插件。
 
-`apiKey` additionally carries `.role('secret')`. The settings subsystem strips secret fields from every wire response and ships a sidecar instead: `secrets: [{ path: ['apiKey'], set: true|false }]`. The browser learns *whether* a key exists, never its value.
+`apiKey` 额外带 `.role('secret')`。settings 子系统从所有跨线响应中剥离 secret 字段，改发一个旁路记录：`secrets: [{ path: ['apiKey'], set: true|false }]`。浏览器只知道 Key **是否存在**，永远拿不到值。
 
-### apply lifecycle
+### apply 生命周期
 
 ```js
 export const inject = ['tools']
 export function apply(ctx, config) {
   const mcp = new ExaMcpClient(config.mcpBaseUrl)
-  ctx.effect(() => () => { void mcp.dispose() })        // session teardown on unload
-  ctx.inject(['settings'], child => {                   // optional services:
+  ctx.effect(() => () => { void mcp.dispose() })        // 卸载时关闭会话
+  ctx.inject(['settings'], child => {                   // 可选服务：
     child.effect(() => child.settings.configure({ auto: false }, ctx.fiber))
   })
-  ctx.inject(['systemPrompt'], child => { /* guidance sections */ })
+  ctx.inject(['systemPrompt'], child => { /* 提示词段落 */ })
   if (config.search) ctx.tools.register({ /* exa_search */ })
   if (config.fetch)  ctx.tools.register({ /* exa_fetch */ })
 }
 ```
 
-- Registrations on `ctx.tools` / `child.systemPrompt` are effect-scoped: unloading the plugin unregisters the tools and prompt sections automatically.
-- `settings.configure({ auto: false })` declares that this plugin ships its own configuration page; it does not affect form reads/writes.
-- Prompt sections (`tool:exa_search` order 110, `tool:exa_fetch` order 111) render only while the step admits their tool (`child.tools.get(name, scope, toolSet)`), mirroring `dsh-tool-web`'s trust guidance.
+- `ctx.tools` / `child.systemPrompt` 上的注册都是 effect 所有：插件卸载时工具与提示词段落自动注销。
+- `settings.configure({ auto: false })` 声明本插件自带配置页；不影响表单读写。
+- 提示词段落（`tool:exa_search` order 110、`tool:exa_fetch` order 111）仅在该步准入对应工具时渲染（`child.tools.get(name, scope, toolSet)`），与 `dsh-tool-web` 的信任提示一致。
 
-### Tool definitions: the native contract
+### 工具定义：原生契约
 
-The tools register **raw `ToolDefinition` objects** — the same contract `dsh-mcp-client` uses (`createMcpToolDefinition`): standard JSON Schema `parameters`, an `output.schema` + `render(args, value)`, and `execute(args, exec)` returning the canonical JSON value.
+两个工具注册的是**原生 `ToolDefinition` 对象**——与 `dsh-mcp-client`（`createMcpToolDefinition`）相同的契约：标准 JSON Schema 的 `parameters`、`output.schema` + `render(args, value)`、返回规范 JSON 值的 `execute(args, exec)`。
 
-Why not `defineTool` from `@deepseek-ai/dsh-tools`? `defineTool` is a pure helper (DSL→JSON Schema + argument validation), but importing it pulls the package's runtime module graph (`cordis`, `dsh-scope`, `dsh-llm`, …) into the plugin's resolution scope. The raw contract avoids that dependency entirely; argument validation lives in `execute` (`checkArgs`, `checkOptionalCount`, semantic checks), and thrown `Error`s become normal error tool results.
+为什么不用 `@deepseek-ai/dsh-tools` 的 `defineTool`？`defineTool` 本身是纯函数（DSL→JSON Schema + 参数校验），但 import 它会把该包的运行时模块图（`cordis`、`dsh-scope`、`dsh-llm`……）拉进插件的解析范围。原生契约完全避开这个依赖；参数校验放在 `execute` 内（`checkArgs`、`checkOptionalCount`、语义检查），抛出的 `Error` 会成为普通的错误工具结果。
 
-Both tools declare `isConcurrencySafe: () => true` (read-only network calls).
+两个工具都声明 `isConcurrencySafe: () => true`（只读网络调用）。
 
-### Timeouts and cancellation
+### 超时与取消
 
-Each call fuses the caller's signal with a live budget:
+每次调用把调用方信号与实时预算融合：
 
 ```js
 AbortSignal.any([exec.signal, AbortSignal.timeout(config.searchTimeoutMs.get())])
 ```
 
-- Caller cancellation rethrows untouched → the pipeline classifies it `ABORTED`.
-- Internal timeout becomes `Exa request timed out after N ms`.
-- Budgets are read per call, so a settings change applies to the next call. The plugin does not set declarative `timeoutMs` (which would freeze at registration); enforcement is real, inside `execute`.
+- 调用方取消原样重抛 → 管线归类为 `ABORTED`。
+- 内部超时变为 `Exa request timed out after N ms`。
+- 预算逐次调用读取，settings 修改对下一次调用生效。插件不设置声明式 `timeoutMs`（那会在注册时冻结）；强制在 `execute` 内真实执行。
 
-## 4. Backends
+## 4. 后端
 
-Selection per call: `config.apiKey.get()?.trim()` non-empty → REST, else MCP.
+逐次调用选择：`config.apiKey.get()?.trim()` 非空 → REST，否则 MCP。
 
-### 4.1 REST (with API key)
+### 4.1 REST（有 API Key）
 
-| Tool | Request | Response fields used |
+| 工具 | 请求 | 使用的响应字段 |
 |---|---|---|
 | `exa_search` | `POST {apiBaseUrl}/search` `{ query, type: 'auto', numResults, contents: { highlights: true } }` | `results[].{url,title,highlights,publishedDate}` |
-| `exa_fetch` | `POST {apiBaseUrl}/contents` `{ ids: [url], text: { maxCharacters } }` | `results[0].{url,title,text}`, `statuses[]` |
+| `exa_fetch` | `POST {apiBaseUrl}/contents` `{ ids: [url], text: { maxCharacters } }` | `results[0].{url,title,text}`、`statuses[]` |
 
-Auth: `x-api-key` header. `/contents` takes top-level `text` (no `contents` wrapper — that's `/search` only). Non-2xx bodies `{ error, tag }` map to actionable messages: 401/403 → check the key under Plugins; 402 → billing; 429 → rate limit. Error text quotes only the server's response, never the request key.
+认证：`x-api-key` 头。`/contents` 的 `text` 在顶层（没有 `contents` 包装——那是 `/search` 专属）。非 2xx 响应体 `{ error, tag }` 映射为可操作的消息：401/403 → 去 Plugins 检查 Key；402 → 计费；429 → 限流。错误文本只引用服务端响应，绝不包含请求 Key。
 
-### 4.2 MCP (free endpoint)
+### 4.2 MCP（免费端点）
 
-`lib/exa-mcp.js` is a minimal streamable-HTTP client — no MCP SDK. Sequence (verified against `mcp.exa.ai`, server `exa-search-server` 3.5.1):
+`lib/exa-mcp.js` 是极简 streamable-HTTP 客户端——不依赖 MCP SDK。时序（已对 `mcp.exa.ai` 实测，服务端 `exa-search-server` 3.5.1）：
 
 ```
-POST initialize            → 200, SSE; Mcp-Session-Id response header
+POST initialize                → 200，SSE；响应头 Mcp-Session-Id
 POST notifications/initialized → 202
-POST tools/call            → 200, SSE (or JSON); match JSON-RPC id
+POST tools/call                → 200，SSE（或 JSON）；按 JSON-RPC id 匹配
 ```
 
-- Every POST sends `Accept: application/json, text/event-stream`; responses are parsed as SSE frames (`data:` lines → JSON) or plain JSON.
-- The session id is cached and sent as `Mcp-Session-Id`. Concurrent first calls share one initialize promise; the handshake runs on its own 15 s budget so one caller's cancellation cannot fail it for others.
-- HTTP 404 on `tools/call` (expired session) drops the id and retries once.
-- `result.isError` throws the server's own text; JSON-RPC `error` objects throw code+message.
-- Plugin unload sends a best-effort `DELETE` with the session id.
+- 每个 POST 都带 `Accept: application/json, text/event-stream`；响应按 SSE 帧（`data:` 行 → JSON）或纯 JSON 解析。
+- 会话 id 缓存后以 `Mcp-Session-Id` 发送。并发的首次调用共享同一个 initialize promise；握手用自己的 15 s 预算，某个调用方的取消不会连累其他等待者。
+- `tools/call` 收到 HTTP 404（会话过期）时丢弃 id 并重试一次。
+- `result.isError` 抛出服务端自己的文本；JSON-RPC `error` 对象抛出 code+message。
+- 插件卸载时尽力发送带会话 id 的 `DELETE`。
 
-Tool arguments on the hosted server:
+托管服务端上的工具参数：
 
-- `web_search_exa`: `{ query, numResults, objective }` (`objective` is schema-required; the plugin passes the query text).
-- `web_fetch_exa`: `{ urls: [url], maxCharacters }` — note `urls` is an **array**.
+- `web_search_exa`：`{ query, numResults, objective }`（`objective` 为 schema 必填；插件传入 query 文本）。
+- `web_fetch_exa`：`{ urls: [url], maxCharacters }`——注意 `urls` 是**数组**。
 
-### 4.3 Normalizing MCP text
+### 4.3 MCP 文本归一化
 
-The free endpoint returns formatted text, not JSON:
+免费端点返回格式化文本而非 JSON：
 
-- Search: one text item, blocks of `Title: …` / `URL: …` / `Published: …` / `Author: …` / `Highlights:` + body. `parseMcpSearch` splits blocks on a `Title:` line **followed by** a `URL:` line (lookahead keeps literal `Title:` lines inside highlight bodies from splitting), extracts headers, and caps each excerpt. If nothing parses, the raw text passes through as `text` — a server format change degrades, not fails.
-- Fetch: `# Title` + `URL: …` + markdown body; `parseMcpFetch` falls back to the raw text with the requested URL.
+- 搜索：一个 text 项，若干 `Title: …` / `URL: …` / `Published: …` / `Author: …` / `Highlights:` + 正文 的块。`parseMcpSearch` 在「`Title:` 行**后跟** `URL:` 行」处切块（前瞻避免摘录正文里的字面 `Title:` 行误切），提取头部并给每条摘录截断。若解析不出任何块，原文以 `text` 透传——服务端格式变化时降级而非失败。
+- 抓取：`# Title` + `URL: …` + markdown 正文；`parseMcpFetch` 解析失败时回退为原文 + 请求 URL。
 
-Canonical outputs (identical for both backends):
+规范输出（两条后端一致）：
 
 ```jsonc
 // exa_search
@@ -130,24 +130,23 @@ Canonical outputs (identical for both backends):
 { "url", "title?", "text", "truncated" }
 ```
 
-Rendering follows `dsh-tool-web` conventions: the standing untrusted-content notice, `- [title](url) — excerpt (date)` source lines, a cite-your-sources instruction, and a truncation footer. Snippets are whitespace-collapsed and capped at 800 characters (surrogate-safe cut). Fetch truncation is `text.length >= maxCharacters` (heuristic; an exactly-sized page may be flagged).
+渲染沿用 `dsh-tool-web` 约定：固定的不可信内容提示、`- [标题](url) — 摘录 (日期)` 来源行、引用提示、截断尾注。摘录折叠空白并截断到 800 字符（不切开代理对）。抓取截断判据为 `text.length >= maxCharacters`（启发式；恰好等长的页面可能被标记）。
 
-## 5. Settings UI (browser half)
+## 5. 设置界面（浏览器端）
 
-The primary surface is a standalone page in the **Settings panel navigation**, registered into `settings.section` (the same slot third-party pages like the recycle bin use); the identical card also embeds into the Plugins page:
+主入口是**「设置」面板导航中的独立页面**，注册进 `settings.section`（与会话回收站等第三方页面同一插槽）；同一张卡片也嵌入 Plugins 页：
 
 ```js
-// Settings panel page (nav label re-registered on locale change: the shell
-// never subscribes locale state itself).
+// 设置面板页面（locale 变化时重新注册以刷新导航标签：shell 自身不订阅 locale）。
 ctx.slots.inject('settings.section', () => ctx.slots.register({
   name: 'settings.section', id: 'exa-tools', order: 35,
   label: () => t('nav'), inject: () => ({ form, mirror, t }),
 }, ExaSettingsPage))
-// Nav icon: registration id must equal the section id; draws in currentColor.
+// 导航图标：注册 id 必须等于 section id；以 currentColor 绘制。
 ctx.slots.inject('settings.section.icon', () => ctx.slots.register({
   name: 'settings.section.icon', id: 'exa-tools',
 }, ExaSettingsIcon))
-// Plugins-page card, keyed by the bundle package name.
+// Plugins 页卡片，以 bundle 包名为 key。
 ctx.configForms.whileServed(['exa-tools'], () =>
   ctx.slots.inject('plugins.bundle.config', () => ctx.slots.register({
     name: 'plugins.bundle.config', key: 'dsh-exa-tools', locale: 'exaTools',
@@ -155,41 +154,41 @@ ctx.configForms.whileServed(['exa-tools'], () =>
   }, ExaConfigCard)))
 ```
 
-- `ExaSettingsPage` is a heading over `ExaConfigCard`; the section component receives the shell's `close` affordance plus the injected `{ form, mirror, t }`.
+- `ExaSettingsPage` 是标题 + `ExaConfigCard`；section 组件收到 shell 的 `close` 能力与注入的 `{ form, mirror, t }`。
 
-- `plugins.bundle.config` is keyed by the **bundle package name**; the card renders on the bundle's page between its description and its rows. `whileServed` keeps the registration alive only while the Host serves the namespace.
-- Reads: `ctx.configForms.get('exa-tools')` (values + ordered writes) and `ctx.configForms.describe()` (the shared mirror, for the secret presence marker). Both are consumed with `useSyncExternalStore`; class methods are wrapped in `useCallback` to keep `this`.
-- Writes: staged drafts, one **Save** submits `form.mutate(ops, revision)` — `set` for changed fields, `unset` for emptied numeric fields (restores the composed default; the form says so and shows each field's default). The revision fence is captured **when editing begins**, so a concurrent write elsewhere is refused instead of silently overwritten; a refusal auto-reloads the latest values, keeps the drafts, and resets the fence so an informed retry can proceed. Invalid numeric input names the field, marks it `aria-invalid`, expands the fold, and focuses it. Success messages announce via `role="status"`. **Clear API key** is `form.unset('apiKey')`.
-- The key input is write-only (`type=password`, `autocomplete=new-password`, reveal toggle for the draft). Its placeholder reflects the presence marker: “Key configured — type to replace” vs “Paste your Exa API key”.
-- Styling: self-contained controls under a `dsh-exa-` prefix, colors exclusively through `--dsw-alias-*` theme tokens (patterns copied from the official Models settings page). No Harness Client package is imported as a module; React comes from the browser module table (`require('react')`).
-- Locale dictionaries (en/zh) register through `ctx.locale`; all visible text routes through `t`.
+- `plugins.bundle.config` 以 **bundle 包名**为 key；卡片渲染在该 bundle 详情页的描述与行列表之间。`whileServed` 使注册仅在 Host 提供该命名空间期间存活。
+- 读：`ctx.configForms.get('exa-tools')`（值 + 有序写入）与 `ctx.configForms.describe()`（共享 mirror，取 secret 存在标记）。两者都用 `useSyncExternalStore` 消费；类方法用 `useCallback` 包一层以保住 `this`。
+- 写：草稿暂存，一次「保存」提交 `form.mutate(ops, revision)`——变更字段 `set`，清空的数字字段 `unset`（恢复组合默认值；表单会说明这一语义并显示各字段默认值）。revision 围栏在**开始编辑时**取快照，因此别处的并发写入会被拒绝而非静默覆盖；被拒时自动重载最新值、保留草稿并重置围栏，用户核对后可重试。数字校验错误会指明字段、标 `aria-invalid`、展开折叠并聚焦该输入框。成功消息带 `role="status"` 播报。「清除 API Key」即 `form.unset('apiKey')`。
+- Key 输入框只写（`type=password`、`autocomplete=new-password`、草稿可切换显示）。占位符反映存在标记：「已配置 —— 输入新值可替换」/「粘贴 Exa API Key」。
+- 样式：`dsh-exa-` 前缀的自包含控件，颜色全部走 `--dsw-alias-*` 主题令牌（样式范式抄自官方 Models 设置页）。不把任何 Harness Client 包当模块 import；React 来自浏览器模块表（`require('react')`）。
+- 字典（en/zh）经 `ctx.locale` 注册；所有可见文本走 `t`。
 
-## 6. Module resolution
+## 6. 模块解析
 
-A local-directory install **links** the checkout: the profile's `node_modules/dsh-exa-tools` is a junction to the project, and Node resolves the plugin's bare imports from the project's real path. Two consequences:
+本地目录安装是**链接** checkout：profile 的 `node_modules/dsh-exa-tools` 是指向项目的 junction，Node 从项目真实路径解析插件的裸 import。两个推论：
 
-1. The project declares `@deepseek-ai/schemastery` as a dependency and ships a `pnpm-workspace.yaml` with `nodeLinker: hoisted` — real directories, no symlink edge cases under Node/Electron/the loader. Run `pnpm install` once before installing the bundle.
-2. Cross-copy interop is safe by design: schemastery marks schemas with `Symbol.for('schemastery')`, and cosmokit's volatile references use `Symbol.for('cosmokit.volatile.write')` explicitly “to identify references across ESM/CJS copies”. The loader's own copies recognize this plugin's schema and config references.
+1. 项目把 `@deepseek-ai/schemastery` 声明为依赖，并带一份 `nodeLinker: hoisted` 的 `pnpm-workspace.yaml`——真实目录，避免 Node/Electron/loader 下的符号链接边界问题。安装 bundle 前先执行一次 `pnpm install`。
+2. 跨副本互操作由设计保证：schemastery 用 `Symbol.for('schemastery')` 标记 schema，cosmokit 的 volatile 引用用 `Symbol.for('cosmokit.volatile.write')`，明确「用于跨 ESM/CJS 副本识别引用」。loader 自己的副本能识别本插件的 schema 与 config 引用。
 
-`@deepseek-ai/dsh-tools` is deliberately **not** imported (see §3); the tool registry consumes the plain definition objects through `ctx.tools`.
+刻意**不** import `@deepseek-ai/dsh-tools`（见 §3）；工具注册表通过 `ctx.tools` 消费纯定义对象。
 
-## 7. Security & privacy
+## 7. 安全与隐私
 
-- Queries and fetched URLs go to Exa (`mcp.exa.ai` or `apiBaseUrl`). The system prompt and tool output label all returned content as external, untrusted data.
-- The API key travels only to `apiBaseUrl` as `x-api-key`. It is never logged, never included in error messages, and never returned to the browser (secret redaction).
-- At rest the key sits in the profile's `cordis.patch.yml` like other plugin config — plain text, guarded by OS permissions. A future version may move it to the DSH credentials service.
-- `exa_fetch` accepts any http(s) URL, including loopback/private hosts (same posture as the built-in `web_fetch`); deployments needing per-call confirmation should add a `tools/pre-execute` policy.
+- 搜索词与抓取 URL 发送到 Exa（`mcp.exa.ai` 或 `apiBaseUrl`）。系统提示词与工具输出把所有返回内容标记为外部不可信数据。
+- API Key 仅以 `x-api-key` 头发往 `apiBaseUrl`。不记日志、不进错误消息、不回传浏览器（secret 脱敏）。
+- 静态存储时 Key 与其他插件配置一样位于 profile 的 `cordis.patch.yml`——明文，由操作系统权限保护。未来版本可迁移到 DSH credentials 服务。
+- `exa_fetch` 接受任意 http(s) URL，包括环回/内网地址（与内置 `web_fetch` 姿态一致）；需要逐次确认的部署应添加 `tools/pre-execute` 策略。
 
-## 8. Testing
+## 8. 测试
 
-- `scripts/smoke.mjs` — live backend tests: free search/fetch through `lib/*`, REST 401 error path (`--rest`), real REST with `EXA_API_KEY` (`--api`).
-- `scripts/apply-test.mjs` — runs `apply()` against a mock cordis context, then executes the registered definitions: free-mode canonical values + render, argument validation, and API-mode wiring (invalid key → mapped 401).
-- `scripts/client-test.mjs` — loads `client.js` through a mock `__ModuleLoader__`, runs the browser `apply()` against a mock context, and renders the settings page, nav icon, and card with a minimal React mock; asserts the three slot registrations and their identity rules.
-- Verified in the profile: bundle installs, row `include:exa-tools` reaches `fiberPhase: active`, settings namespace derivation and slot contract checked against the installed sources. Rendered UI and in-session tool calls require a browser/new session and are reported separately.
+- `scripts/smoke.mjs` —— 真实后端测试：经 `lib/*` 的免费搜索/抓取、REST 401 错误路径（`--rest`）、带 `EXA_API_KEY` 的真实 REST（`--api`）。
+- `scripts/apply-test.mjs` —— 用 mock cordis context 跑 `apply()`，再执行注册出的定义：免费模式规范值 + 渲染、参数校验、API 模式接线（无效 Key → 映射后的 401）。
+- `scripts/client-test.mjs` —— 经 mock `__ModuleLoader__` 加载 `client.js`，用 mock context 跑浏览器端 `apply()`，以最小 React mock 渲染设置页、导航图标与卡片；断言三个插槽注册及其 id 规则。
+- 已在 profile 中验证：bundle 安装成功，行 `include:exa-tools` 达到 `fiberPhase: active`；settings 命名空间推导与插槽契约已对照安装源码核实。渲染效果与会话内工具调用需要浏览器/新会话，另行报告。
 
-## 9. Possible extensions
+## 9. 可能的扩展
 
-- `EXA_API_KEY` environment fallback (with an honest mode indicator in the UI).
-- Advanced search filters in API mode (`category`, `includeDomains`, date ranges) via `web_search_advanced_exa` or REST.
-- Batch `exa_fetch` (the MCP tool already accepts multiple URLs).
-- Credentials-service storage for the key, keeping the same write-only UI.
+- `EXA_API_KEY` 环境变量回退（并在 UI 上如实显示模式）。
+- API 模式下的高级搜索过滤（`category`、`includeDomains`、日期范围），走 `web_search_advanced_exa` 或 REST。
+- 批量 `exa_fetch`（MCP 工具本就接受多 URL）。
+- Key 改存 credentials 服务，保持同样的只写 UI。
