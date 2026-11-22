@@ -1,4 +1,4 @@
-# dsh-exa-tools
+# <img src="icon.svg" width="32" height="32" alt=""> dsh-exa-tools
 
 Exa web search and fetch tools for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (DSH). Adds two tools to every agent in the profile:
 
