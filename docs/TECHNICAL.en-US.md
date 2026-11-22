@@ -6,7 +6,7 @@ Architecture of `dsh-exa-tools`, a DeepSeek Harness (DSH) bundle. Written agains
 
 ## 1. Design goals
 
-1. **Zero-config start.** With no API key, both tools work against Exa's free hosted MCP endpoint. No account, no env var, no YAML edit.
+1. **Zero-config start.** With no API key, exa_search and exa_fetch work against Exa's free hosted MCP endpoint. No account, no env var, no YAML edit.
 2. **One model-facing contract.** Free (MCP) and paid (REST) backends normalize to the same canonical output per tool, so the model never sees which mode is active.
 3. **Settings UI for the key.** The key is entered on the plugin's page under Plugins, stored as a write-only secret, and applies live without a restart.
 4. **Small dependency surface.** Plain ESM JavaScript, no build step, one npm dependency (`@deepseek-ai/schemastery`).
@@ -66,7 +66,7 @@ The tools register **raw `ToolDefinition` objects** — the same contract `dsh-m
 
 Why not `defineTool` from `@deepseek-ai/dsh-tools`? `defineTool` is a pure helper (DSL→JSON Schema + argument validation), but importing it pulls the package's runtime module graph (`cordis`, `dsh-scope`, `dsh-llm`, …) into the plugin's resolution scope. The raw contract avoids that dependency entirely; argument validation lives in `execute` (`checkArgs`, `checkOptionalCount`, semantic checks), and thrown `Error`s become normal error tool results.
 
-Both tools declare `isConcurrencySafe: () => true` (read-only network calls).
+All tools declare `isConcurrencySafe: () => true` (read-only network calls).
 
 ### Timeouts and cancellation
 

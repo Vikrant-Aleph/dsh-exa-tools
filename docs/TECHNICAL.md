@@ -6,7 +6,7 @@ English version: [TECHNICAL.en-US.md](TECHNICAL.en-US.md)
 
 ## 1. 设计目标
 
-1. **零配置可用。** 没有 API Key 时，两个工具直接走 Exa 免费托管 MCP 端点。不需要账号、环境变量或改 YAML。
+1. **零配置可用。** 没有 API Key 时，exa_search 与 exa_fetch 直接走 Exa 免费托管 MCP 端点。不需要账号、环境变量或改 YAML。
 2. **统一的模型侧契约。** 免费（MCP）与付费（REST）两条后端归一化为同一份规范输出，模型感知不到当前模式。
 3. **设置界面填 Key。** Key 在「插件」页填写，以只写密钥保存，实时生效，无需重启。
 4. **最小依赖面。** 纯 ESM JavaScript，无构建步骤，只有一个 npm 依赖（`@deepseek-ai/schemastery`）。
@@ -62,11 +62,11 @@ export function apply(ctx, config) {
 
 ### 工具定义：原生契约
 
-两个工具注册的是**原生 `ToolDefinition` 对象**——与 `dsh-mcp-client`（`createMcpToolDefinition`）相同的契约：标准 JSON Schema 的 `parameters`、`output.schema` + `render(args, value)`、返回规范 JSON 值的 `execute(args, exec)`。
+所有工具注册的都是**原生 `ToolDefinition` 对象**——与 `dsh-mcp-client`（`createMcpToolDefinition`）相同的契约：标准 JSON Schema 的 `parameters`、`output.schema` + `render(args, value)`、返回规范 JSON 值的 `execute(args, exec)`。
 
 为什么不用 `@deepseek-ai/dsh-tools` 的 `defineTool`？`defineTool` 本身是纯函数（DSL→JSON Schema + 参数校验），但 import 它会把该包的运行时模块图（`cordis`、`dsh-scope`、`dsh-llm`……）拉进插件的解析范围。原生契约完全避开这个依赖；参数校验放在 `execute` 内（`checkArgs`、`checkOptionalCount`、语义检查），抛出的 `Error` 会成为普通的错误工具结果。
 
-两个工具都声明 `isConcurrencySafe: () => true`（只读网络调用）。
+所有工具都声明 `isConcurrencySafe: () => true`（只读网络调用）。
 
 ### 超时与取消
 

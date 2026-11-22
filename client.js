@@ -28,7 +28,7 @@ window.__ModuleLoader__.load({
       en: {
         nav: 'Exa tools',
         pageTitle: 'Exa search tools',
-        intro: 'Exa powers exa_search and exa_fetch. Without a key the tools use Exa\'s free hosted endpoint (rate-limited); with a key they use the official Exa API.',
+        intro: 'Exa powers five tools: exa_search and exa_fetch work out of the box; exa_answer, exa_search_advanced and exa_find_similar need an API key. Without a key the tools use the free hosted endpoint (rate-limited); with a key they use the official Exa API.',
         modeApi: 'API mode — official Exa API (api.exa.ai)',
         modeFree: 'Free mode — hosted MCP endpoint (mcp.exa.ai)',
         modeFreeHint: 'The free endpoint is rate-limited. Add an API key for higher limits.',
@@ -65,7 +65,7 @@ window.__ModuleLoader__.load({
       zh: {
         nav: 'Exa 搜索',
         pageTitle: 'Exa 搜索工具',
-        intro: 'Exa 为 exa_search 和 exa_fetch 提供支持。未填写 API Key 时使用 Exa 免费托管端点（有速率限制）；填写后改用 Exa 官方 API。',
+        intro: 'Exa 为五个工具提供支持：exa_search、exa_fetch 开箱即用；exa_answer、exa_search_advanced、exa_find_similar 需 API Key。未填 Key 走免费托管端点（有速率限制），填 Key 走官方 API。',
         modeApi: 'API 模式 —— Exa 官方 API（api.exa.ai）',
         modeFree: '免费模式 —— 托管 MCP 端点（mcp.exa.ai）',
         modeFreeHint: '免费端点有速率限制。填写 API Key 可获得更高限额。',

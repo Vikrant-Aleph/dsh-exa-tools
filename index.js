@@ -122,7 +122,7 @@ function checkStringArray(args, field) {
 
 /**
  * Register the enabled tools and their prompt guidance. Registrations are
- * effect-scoped: unloading the plugin unregisters both tools.
+ * effect-scoped: unloading the plugin unregisters its tools.
  * @param {import('@deepseek-ai/cordis').Context} ctx
  * @param {*} config parsed Config (volatile fields read through .get())
  */

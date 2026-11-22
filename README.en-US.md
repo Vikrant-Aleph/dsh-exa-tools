@@ -4,10 +4,13 @@
   dsh-exa-tools
 </h1>
 
-Exa web search and fetch tools for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (DSH). Adds two tools to every agent in the profile:
+Exa web search and fetch tools for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (DSH). Adds five tools to every agent in the profile:
 
 - **`exa_search`** — semantic web search: describe the ideal page in natural language, get back source URLs with titles and relevant excerpts.
 - **`exa_fetch`** — read any webpage through Exa as clean text/markdown.
+- **`exa_answer`** — Q&A: an Exa-generated answer with citation sources (API key required).
+- **`exa_search_advanced`** — search with category, domain, and published-date filters (API key required).
+- **`exa_find_similar`** — find webpages similar to a given URL (API key required).
 
 **No API key? It just works.**
 
@@ -44,7 +47,7 @@ Three more tools are API-only — `exa_answer` (Q&A), `exa_search_advanced` (fil
 
 > **Local directory installs:** DSH links the checkout instead of copying it. Run `pnpm install` (or `npm install`) in the project directory once before installing, so the plugin's `@deepseek-ai/schemastery` dependency resolves. The project uses a hoisted `node_modules` layout on purpose — see [Technical documentation](docs/TECHNICAL.en-US.md#module-resolution).
 
-After installation the plugin is enabled immediately (HMR). Open a **new session** and the two tools are available to the agent.
+After installation the plugin is enabled immediately (HMR). Open a **new session** and the tools are available to the agent (the API-only ones need a key set on the settings page first).
 
 ## Set up the API key (optional)
 
