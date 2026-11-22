@@ -6,8 +6,8 @@
 
 给 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）接入 Exa 搜索的插件，为 profile 中的每个 agent 增加五个工具：
 
-- **`exa_search`** —— 语义化网页搜索：用自然语言描述你想找的页面，返回来源 URL、标题和相关摘录。
-- **`exa_fetch`** —— 通过 Exa 抓取任意网页，返回干净的正文（text/markdown）。
+- **`exa_search`** —— 语义化网页搜索：用自然语言描述你想找的页面，返回来源 URL、标题和相关摘录。（无需API Key）
+- **`exa_fetch`** —— 通过 Exa 抓取任意网页，返回干净的正文（text/markdown）。（无需API Key）
 - **`exa_answer`** —— 问答：返回 Exa 生成的回答与引用来源（需 API Key）。
 - **`exa_search_advanced`** —— 带类别、域名、发布时间过滤的高级搜索（需 API Key）。
 - **`exa_find_similar`** —— 查找与给定 URL 相似的网页（需 API Key）。

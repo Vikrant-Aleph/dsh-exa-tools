@@ -6,8 +6,8 @@
 
 Exa web search and fetch tools for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (DSH). Adds five tools to every agent in the profile:
 
-- **`exa_search`** — semantic web search: describe the ideal page in natural language, get back source URLs with titles and relevant excerpts.
-- **`exa_fetch`** — read any webpage through Exa as clean text/markdown.
+- **`exa_search`** — semantic web search: describe the ideal page in natural language, get back source URLs with titles and relevant excerpts. (no API key needed)
+- **`exa_fetch`** — read any webpage through Exa as clean text/markdown. (no API key needed)
 - **`exa_answer`** — Q&A: an Exa-generated answer with citation sources (API key required).
 - **`exa_search_advanced`** — search with category, domain, and published-date filters (API key required).
 - **`exa_find_similar`** — find webpages similar to a given URL (API key required).
