@@ -214,3 +214,7 @@ A local-directory install **links** the checkout: the profile's `node_modules/ds
 - **Below 0.2.2-rc.1** the settings nav entry shows the shell's default glyph: `slots.inject('settings.section.icon', …)` waits for a declaration that never arrives, which is a no-op, not an error.
 - **Cross-copy safety on older hosts**: the plugin ships its own schemastery 3.19.0 while a 0.1.7 host parses with 3.18.4. Both mark schemas with `Symbol.for('schemastery')` and volatile references with `Symbol.for('cosmokit.volatile.write')` (verified identical in cosmokit 1.8.5 / 1.8.6 / 1.9.0), so the older loader recognizes this plugin's schema and config references.
 - **Node**: the plugin code needs ≥20.3 (`AbortSignal.any` is the newest API used); DSH's own runtime floor may be higher.
+
+## 11. Release pipeline
+
+`.github/workflows/release.yml`, triggered by pushing a `v*` tag: verify the tag matches the `package.json` version → `pnpm install --frozen-lockfile` → client tests (`test:client`, offline and deterministic; `smoke` / `test:apply` hit the live Exa endpoints and stay local dev tools) → `pnpm pack` → `softprops/action-gh-release` creates the Release with the tarball attached and generated notes → `npm publish --access public` when the repository's `NPM_TOKEN` secret is set (skipped otherwise). The workflow needs `contents: write`.

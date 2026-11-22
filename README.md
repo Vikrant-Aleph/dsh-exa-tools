@@ -16,13 +16,20 @@
 
 ## 安装
 
-**通过 DSH 界面：** 侧边栏「插件」→「添加插件」，指向本项目：
+**方式一：下载 Release 安装（推荐）**
 
-- 本地目录：`D:\path\to\dsh-exa-tools`（或 `/path/to/dsh-exa-tools`）
+1. 到 [Releases](https://github.com/Vikrant-Aleph/dsh-exa-tools/releases) 下载最新版的 `dsh-exa-tools-<版本>.tgz`
+2. DSH 侧边栏「插件」→「添加插件」，选择该 tgz 文件（或直接粘贴 Release 附件的 URL）
+
+**方式二：npm 安装**
+
+「插件」→「添加插件」，直接填包名 `dsh-exa-tools`。
+
+**方式三：Git 地址 / 本地目录（开发者）**
+
 - Git 地址：`https://github.com/Vikrant-Aleph/dsh-exa-tools.git`
-- 发布到 npm 后也可直接填包名 `dsh-exa-tools`
-
-**通过对话：** 直接让 agent 安装，例如「安装 `D:\path\to\dsh-exa-tools` 这个插件」。
+- 本地目录：`D:\path\to\dsh-exa-tools`（或 `/path/to/dsh-exa-tools`）
+- 也可以直接让 agent 安装，例如「安装 `D:\path\to\dsh-exa-tools` 这个插件」
 
 > **本地目录安装注意：** DSH 以链接（link）方式引用你的 checkout，而不是复制。安装前请先在项目目录里执行一次 `pnpm install`（或 `npm install`），让插件依赖的 `@deepseek-ai/schemastery` 可解析。项目刻意使用 hoisted 的 `node_modules` 布局，原因见[技术文档](docs/TECHNICAL.md#模块解析)。
 
@@ -123,6 +130,19 @@ pnpm test:client      # 设置页 / 导航图标 / 卡片注册
 - 抓取截断按「长度达到请求预算」判断，恰好等长的页面可能被标记为截断。
 - API Key 存于 profile patch（磁盘明文）；本版本未使用 DSH 的 credentials 服务。
 - 暂不支持 `EXA_API_KEY` 环境变量回退——Key 来自插件页面或 profile patch。
+
+## 发布
+
+推送 `v*` 版本标签即自动发布：GitHub Actions 会校验标签与 `package.json` 版本一致、安装依赖、跑客户端测试、打包 tgz，并创建带附件的 GitHub Release。
+
+```sh
+# 1. 修改 package.json 的 version，提交并推送
+git tag v0.1.1
+git push origin v0.1.1
+# 2. Actions 自动建 Release（附 tgz）；配置了 NPM_TOKEN 时同步发布 npm
+```
+
+npm 自动发布的一次性准备：仓库 **Settings → Secrets and variables → Actions** 新增 `NPM_TOKEN`（npmjs.com 的 Automation token）。未配置时 workflow 自动跳过 npm 发布，只建 Release。
 
 ## 许可证
 

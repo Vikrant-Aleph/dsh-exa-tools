@@ -1,0 +1,69 @@
+name: Release
+
+# Push a version tag (v0.1.0, v0.2.0, ...) to build, test, pack, and publish
+# a GitHub Release with the installable tarball. When the repository has an
+# NPM_TOKEN secret, the same run also publishes the package to npm.
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - name: Verify tag matches package version
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG="$(node -p "require('./package.json').version")"
+          if [ "$TAG" != "$PKG" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match package.json version $PKG" >&2
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Offline, deterministic test (slot registrations + settings page render).
+      # smoke / test:apply hit the live Exa endpoints and stay local dev tools.
+      - name: Client tests
+        run: pnpm test:client
+
+      - name: Pack tarball
+        run: pnpm pack
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dsh-exa-tools-*.tgz
+          generate_release_notes: true
+          body: |
+            ## Install / 安装
+
+            - **DSH → Plugins → Add plugin**: upload the attached `.tgz`, or paste its URL
+            - **npm**: package name `dsh-exa-tools` (DSH → Plugins → Add plugin)
+
+            See the README for setup (Settings → Exa tools) and configuration.
+
+      - name: Publish to npm (only when NPM_TOKEN is configured)
+        if: ${{ env.NPM_TOKEN != '' }}
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

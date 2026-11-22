@@ -213,3 +213,7 @@ ctx.configForms.whileServed(['exa-tools'], () =>
 - **低于 0.2.2-rc.1** 时设置导航项显示 shell 默认图标：`slots.inject('settings.section.icon', …)` 等待一个永远不会出现的声明，是无操作而非错误。
 - **老宿主上的跨副本安全**：插件自带 schemastery 3.19.0，而 0.1.7 宿主用 3.18.4 解析。两者都用 `Symbol.for('schemastery')` 标记 schema、用 `Symbol.for('cosmokit.volatile.write')` 标记 volatile 引用（已核实 cosmokit 1.8.5 / 1.8.6 / 1.9.0 协议一致），因此老 loader 能识别本插件的 schema 与 config 引用。
 - **Node**：插件代码需要 ≥20.3（用到的最新 API 是 `AbortSignal.any`）；DSH 自身的运行时下限可能更高。
+
+## 11. 发布流水线
+
+`.github/workflows/release.yml`，推送 `v*` 标签触发：校验标签与 `package.json` 版本一致 → `pnpm install --frozen-lockfile` → 客户端测试（`test:client`，离线且确定；`smoke` / `test:apply` 访问真实 Exa 端点，保留为本地开发工具）→ `pnpm pack` → `softprops/action-gh-release` 创建带 tgz 附件的 Release（自动生成 release notes）→ 仓库配置了 `NPM_TOKEN` secret 时执行 `npm publish --access public`（未配置则跳过）。workflow 需要 `contents: write` 权限。

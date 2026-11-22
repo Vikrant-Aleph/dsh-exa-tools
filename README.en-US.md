@@ -16,13 +16,20 @@ Exa web search and fetch tools for [DeepSeek Harness](https://github.com/deepsee
 
 ## Install
 
-**From the DSH UI:** sidebar **Plugins** → **Add plugin** → point it at this project:
+**Option 1: download a Release (recommended)**
 
-- a local directory: `D:\path\to\dsh-exa-tools` (or `/path/to/dsh-exa-tools`)
-- a Git URL: `https://github.com/Vikrant-Aleph/dsh-exa-tools.git`
-- the package name `dsh-exa-tools` once published to npm
+1. Grab the latest `dsh-exa-tools-<version>.tgz` from [Releases](https://github.com/Vikrant-Aleph/dsh-exa-tools/releases)
+2. DSH sidebar **Plugins** → **Add plugin** → pick the tgz file (or paste the Release asset URL)
 
-**From a conversation:** ask the agent to install the bundle, e.g. “install the plugin at `D:\path\to\dsh-exa-tools`”.
+**Option 2: npm**
+
+**Plugins** → **Add plugin** → enter the package name `dsh-exa-tools`.
+
+**Option 3: Git URL / local directory (developers)**
+
+- Git URL: `https://github.com/Vikrant-Aleph/dsh-exa-tools.git`
+- Local directory: `D:\path\to\dsh-exa-tools` (or `/path/to/dsh-exa-tools`)
+- Or ask the agent: “install the plugin at `D:\path\to\dsh-exa-tools`”
 
 > **Local directory installs:** DSH links the checkout instead of copying it. Run `pnpm install` (or `npm install`) in the project directory once before installing, so the plugin's `@deepseek-ai/schemastery` dependency resolves. The project uses a hoisted `node_modules` layout on purpose — see [Technical documentation](docs/TECHNICAL.en-US.md#module-resolution).
 
@@ -123,6 +130,19 @@ See [docs/TECHNICAL.en-US.md](docs/TECHNICAL.en-US.md) for the architecture: bun
 - Fetch truncation is detected by length reaching the requested budget, so an exactly-sized page may be marked truncated.
 - The API key is stored in the profile patch (plain text on disk); DSH's credentials service is not used in this version.
 - No `EXA_API_KEY` environment fallback yet — the key comes from the plugin page or the profile patch.
+
+## Publishing
+
+Pushing a `v*` version tag releases automatically: GitHub Actions verifies the tag matches `package.json`, installs dependencies, runs the client tests, packs the tarball, and creates a GitHub Release with the asset attached.
+
+```sh
+# 1. Bump version in package.json, commit and push
+git tag v0.1.1
+git push origin v0.1.1
+# 2. Actions creates the Release (with tgz); also publishes to npm when NPM_TOKEN is set
+```
+
+One-time setup for npm publishing: add an `NPM_TOKEN` secret (an npmjs.com Automation token) under **Settings → Secrets and variables → Actions**. Without it the workflow skips npm and only creates the Release.
 
 ## License
 
